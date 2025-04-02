@@ -1,0 +1,5 @@
+*.pth
+Cifar/data/*
+Cifar/logs/*
+Cifar/Chase_models/*
+data/*
