@@ -591,15 +591,15 @@ class Masking(object):
             # Get UMM scores (existing)
             weight = torch.abs(self.get_module(index).weight.clone())
             mask = self.masks[self.get_mask_name(index)]
-            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()   # False if channel is entirely pruned
 
-            weight = weight[filter_mask]
-            mask = mask[filter_mask]
+            weight = weight[filter_mask]    # weight of individual weights, ie. (64,64,1,1)
+            mask = mask[filter_mask]    # mask of individual weights, ie. (64,64,1,1)
 
             umm_scores = []
             for filter_weight, filter_mask in zip(weight, mask):
                 if self.args.mag_wise:
-                    umm_score = torch.abs(filter_weight).mean().item()
+                    umm_score = torch.abs(filter_weight).mean().item()  # UMM is the mean of all weights including 0's in a channel
                     umm_scores.append(umm_score)
 
             # Get HE scores (using the faster method)
@@ -620,12 +620,12 @@ class Masking(object):
         umm_array = np.array(all_umm_scores)
         he_array = np.array(all_he_scores)
 
-        # Min-max normalization
+        # Min-max normalization, map scores to 0-1
         norm_umm = (umm_array - umm_array.min()) / (umm_array.max() - umm_array.min() + 1e-8)
         norm_he = (he_array - he_array.min()) / (he_array.max() - he_array.min() + 1e-8)
 
         # Combine scores - lower UMM and higher HE means better candidate for pruning
-        alpha = 0.5  # Balance between UMM and HE
+        alpha = 1.0  # Balance between UMM and HE
         combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he
 
         # Find threshold
