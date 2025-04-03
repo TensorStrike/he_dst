@@ -507,55 +507,55 @@ class Masking(object):
 
 
 
-    def prune_score(self,prune_layer_index,total_to_prune):
-
-        # Gather all scores in a single vector and normalise
-        all_scores=[]
-
-        for index in prune_layer_index:
-
-
-            # single metric
-            weight=  torch.abs(self.get_module(index).weight.clone())
-
-
-            m1_mask=self.masks[self.get_mask_name(index)]
-
-            filter_mask=self.filter_names[self.get_mask_name(index)].bool()
-            weight=weight[filter_mask]
-            mask=m1_mask[filter_mask]
-
-            for filter_weight, filter_mask in zip(weight,mask):
-
-                if self.args.mask_wise:
-                    weight_magnitude = torch.abs(filter_weight)  [filter_mask.bool()]  .mean().item()
-
-                elif self.args.mag_wise:
-                    weight_magnitude = torch.abs(filter_weight) .mean().item()
-
-                elif self.args.kernal_wise:
-                    vector = filter_weight.view(filter_weight.size(0), -1).sum(dim=1)
-                    weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
-
-
-                elif self.args.connection_wise:
-                    vector= filter_weight
-                    weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
-
-                all_scores.append(weight_magnitude)
-
-        print ("current score lengh",len(all_scores))
-        # print ("all_scores",all_scores)
-
-        acceptable_score = np.sort(np.array(all_scores))[-int(len(all_scores)-total_to_prune)]
-        print ("acceptable_score",acceptable_score)
-        # if acceptable_score==0:
-        #     real_acceptable_score=np.sort(np.array(list(set(all_scores))))[1]
-
-        # else:
-        #     real_acceptable_score=acceptable_score
-
-        return acceptable_score
+    # def prune_score(self,prune_layer_index,total_to_prune):
+    #
+    #     # Gather all scores in a single vector and normalise
+    #     all_scores=[]
+    #
+    #     for index in prune_layer_index:
+    #
+    #
+    #         # single metric
+    #         weight=  torch.abs(self.get_module(index).weight.clone())
+    #
+    #
+    #         m1_mask=self.masks[self.get_mask_name(index)]
+    #
+    #         filter_mask=self.filter_names[self.get_mask_name(index)].bool()
+    #         weight=weight[filter_mask]
+    #         mask=m1_mask[filter_mask]
+    #
+    #         for filter_weight, filter_mask in zip(weight,mask):
+    #
+    #             if self.args.mask_wise:
+    #                 weight_magnitude = torch.abs(filter_weight)  [filter_mask.bool()]  .mean().item()
+    #
+    #             elif self.args.mag_wise:
+    #                 weight_magnitude = torch.abs(filter_weight) .mean().item()
+    #
+    #             elif self.args.kernal_wise:
+    #                 vector = filter_weight.view(filter_weight.size(0), -1).sum(dim=1)
+    #                 weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
+    #
+    #
+    #             elif self.args.connection_wise:
+    #                 vector= filter_weight
+    #                 weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
+    #
+    #             all_scores.append(weight_magnitude)
+    #
+    #     print ("current score lengh",len(all_scores))
+    #     # print ("all_scores",all_scores)
+    #
+    #     acceptable_score = np.sort(np.array(all_scores))[-int(len(all_scores)-total_to_prune)]
+    #     print ("acceptable_score",acceptable_score)
+    #     # if acceptable_score==0:
+    #     #     real_acceptable_score=np.sort(np.array(list(set(all_scores))))[1]
+    #
+    #     # else:
+    #     #     real_acceptable_score=acceptable_score
+    #
+    #     return acceptable_score
 
     def hyperspherical_channel_energy(self, index):
         # Get the weight tensor from the module
@@ -582,60 +582,60 @@ class Masking(object):
 
         return channel_scores
 
-    # def prune_score(self, prune_layer_index, total_to_prune):
-    #     all_umm_scores = []
-    #     all_he_scores = []
-    #     all_indices = []
-    #
-    #     for index in prune_layer_index:
-    #         # Get UMM scores (existing)
-    #         grad = torch.abs(self.get_module(index).weight.clone())
-    #         mask = self.masks[self.get_mask_name(index)]
-    #         filter_mask = self.filter_names[self.get_mask_name(index)].bool()
-    #
-    #         grad = grad[filter_mask]
-    #         mask = mask[filter_mask]
-    #
-    #         umm_scores = []
-    #         for filter_grad, filter_mask in zip(grad, mask):
-    #             if self.args.mag_wise:
-    #                 umm_score = torch.abs(filter_grad).mean().item()
-    #                 umm_scores.append(umm_score)
-    #
-    #         # Get HE scores (using the faster method)
-    #         he_scores = self.hyperspherical_channel_energy(index)
-    #
-    #         # Skip if layer has no channels left
-    #         if len(he_scores) == 0:
-    #             continue
-    #
-    #         all_umm_scores.extend(umm_scores)
-    #         all_he_scores.extend(he_scores.tolist())
-    #         all_indices.extend([(index, i) for i in range(len(umm_scores))])
-    #
-    #     # Normalize scores
-    #     if len(all_umm_scores) == 0 or len(all_he_scores) == 0:
-    #         return float('inf')  # No pruning needed
-    #
-    #     umm_array = np.array(all_umm_scores)
-    #     he_array = np.array(all_he_scores)
-    #
-    #     # Min-max normalization
-    #     norm_umm = (umm_array - umm_array.min()) / (umm_array.max() - umm_array.min() + 1e-8)
-    #     norm_he = (he_array - he_array.min()) / (he_array.max() - he_array.min() + 1e-8)
-    #
-    #     # Combine scores - lower UMM and higher HE means better candidate for pruning
-    #     alpha = 0.5  # Balance between UMM and HE
-    #     combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he
-    #
-    #     # Find threshold
-    #     threshold_idx = int(total_to_prune)
-    #     if threshold_idx > 0:
-    #         threshold = np.sort(combined_scores)[-threshold_idx]
-    #         print(threshold)
-    #         return threshold
-    #     else:
-    #         return float('inf')  # No pruning needed
+    def prune_score(self, prune_layer_index, total_to_prune):
+        all_umm_scores = []
+        all_he_scores = []
+        all_indices = []
+
+        for index in prune_layer_index:
+            # Get UMM scores (existing)
+            weight = torch.abs(self.get_module(index).weight.clone())
+            mask = self.masks[self.get_mask_name(index)]
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+
+            weight = weight[filter_mask]
+            mask = mask[filter_mask]
+
+            umm_scores = []
+            for filter_weight, filter_mask in zip(weight, mask):
+                if self.args.mag_wise:
+                    umm_score = torch.abs(filter_weight).mean().item()
+                    umm_scores.append(umm_score)
+
+            # Get HE scores (using the faster method)
+            he_scores = self.hyperspherical_channel_energy(index)
+
+            # Skip if layer has no channels left
+            if len(he_scores) == 0:
+                continue
+
+            all_umm_scores.extend(umm_scores)
+            all_he_scores.extend(he_scores.tolist())
+            all_indices.extend([(index, i) for i in range(len(umm_scores))])
+
+        # Normalize scores
+        if len(all_umm_scores) == 0 or len(all_he_scores) == 0:
+            return float('inf')  # No pruning needed
+
+        umm_array = np.array(all_umm_scores)
+        he_array = np.array(all_he_scores)
+
+        # Min-max normalization
+        norm_umm = (umm_array - umm_array.min()) / (umm_array.max() - umm_array.min() + 1e-8)
+        norm_he = (he_array - he_array.min()) / (he_array.max() - he_array.min() + 1e-8)
+
+        # Combine scores - lower UMM and higher HE means better candidate for pruning
+        alpha = 0.5  # Balance between UMM and HE
+        combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he
+
+        # Find threshold
+        threshold_idx = int(total_to_prune)
+        if threshold_idx > 0:
+            threshold = np.sort(combined_scores)[-threshold_idx]
+            print(threshold)
+            return threshold
+        else:
+            return float('inf')  # No pruning needed
 
 
 
