@@ -174,6 +174,9 @@ class Masking(object):
         jump_decay = CosineDecay(1, (args.update_frequency)*80/len(self.train_loader), 0)
 
         self.temp_mask={}
+
+        self.overlap_history = []
+
     '''
       CHANEL EXPLORE
 
@@ -626,7 +629,7 @@ class Masking(object):
 
         # Combine scores - lower UMM and higher HE means better candidate for pruning
         alpha = 1.0  # Balance between UMM and HE
-        combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he
+        combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he        # we want lowest UMM (least magnitude) and highest HE (most redundant)
 
         # Find threshold
         threshold_idx = int(total_to_prune)
@@ -656,6 +659,73 @@ class Masking(object):
 
         return threshold
 
+    def get_umm_selected_channels(self, prune_layer_index, total_to_prune):
+        """Get channels that would be selected using UMM"""
+        all_scores = []
+        all_indices = []
+
+        # Handle negative or non-integer values
+        total_to_prune = max(0, int(total_to_prune))
+
+        for index in prune_layer_index:
+            grad = torch.abs(self.get_module(index).weight.clone())
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            grad = grad[filter_mask]
+
+            for filter_idx, filter_grad in enumerate(grad):
+                # Original UMM calculation
+                umm_score = torch.abs(filter_grad).mean().item()
+                all_scores.append(umm_score)
+                all_indices.append((index, filter_idx))
+
+        # Sort by UMM (lower is pruned)
+        sorted_indices = [x for _, x in sorted(zip(all_scores, all_indices))]
+        return sorted_indices[:total_to_prune]
+
+    def get_he_selected_channels(self, prune_layer_index, total_to_prune):
+        """Get channels that would be selected using HE"""
+        all_scores = []
+        all_indices = []
+        total_to_prune = max(0, int(total_to_prune))
+
+        for index in prune_layer_index:
+            # Get HE scores
+            he_scores = self.hyperspherical_channel_energy(index)
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+
+            for filter_idx, (is_active, score) in enumerate(zip(filter_mask, he_scores)):
+                if is_active:
+                    all_scores.append(score.item())
+                    all_indices.append((index, filter_idx))
+
+        # Sort by HE (higher is pruned)
+        sorted_indices = [x for _, x in sorted(zip(all_scores, all_indices), reverse=True)]
+        return sorted_indices[:total_to_prune]
+
+    def compare_channel_selection(self, prune_layer_index, total_to_prune):
+        """Compare which channels are selected by UMM vs HE"""
+        if total_to_prune <= 0:
+            print("No channels to prune at this step")
+            self.overlap_history.append((self.steps, 0))
+            return 0
+
+        total_to_prune = int(total_to_prune)
+
+        umm_channels = self.get_umm_selected_channels(prune_layer_index, total_to_prune)
+        he_channels = self.get_he_selected_channels(prune_layer_index, total_to_prune)
+
+        # Calculate overlap
+        umm_set = set([(str(i), j) for i, j in umm_channels])
+        he_set = set([(str(i), j) for i, j in he_channels])
+        overlap = umm_set.intersection(he_set)
+
+        overlap_percent = len(overlap) / len(umm_channels) * 100 if umm_channels else 0
+        print(
+            f"UMM and HE channel selection overlap: {overlap_percent:.2f}% ({len(overlap)}/{len(umm_channels)} channels)")
+
+        self.overlap_history.append((self.steps, overlap_percent))
+
+        return overlap_percent
 
     def del_layer(self):
         #################################prune layer#############################
@@ -670,7 +740,7 @@ class Masking(object):
 
         ### layer wise prune ratio
 
-        filter_numer=self.filter_num()
+        filter_numer=self.filter_num()      # current num of filters
 
         if self.args.gpm_filter_pune:
             rate = self.layer_rate 
@@ -678,7 +748,7 @@ class Masking(object):
             rate=self.args.start_layer_rate-self.layer_rate
         rate=1-rate
         print ("to keep rate",rate)
-        print (filter_numer, self.baseline_filter_num*rate  )
+        print (filter_numer, self.baseline_filter_num*rate  )       # target filter num to keep
         total_to_prune=filter_numer-self.baseline_filter_num*rate
         print ("total_to_prune",total_to_prune)
             
@@ -715,6 +785,9 @@ class Masking(object):
                 print ("total_to_prune",total_to_prune)
 
                 if total_to_prune>0:
+
+                    overlap_percent = self.compare_channel_selection(prune_layer_index, total_to_prune)
+                    print(f"Channel selection overlap: {overlap_percent:.2f}%")
                     
                     acceptable_score=self.prune_score(prune_layer_index,total_to_prune)
 

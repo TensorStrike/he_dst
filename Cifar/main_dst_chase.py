@@ -28,6 +28,7 @@ from sparselearning.models import AlexNet, VGG16, LeNet_300_100, LeNet_5_Caffe, 
 from sparselearning.resnet_cifar100 import ResNet34, ResNet18,ResNet50
 from sparselearning.utils import get_mnist_dataloaders, get_cifar10_dataloaders, plot_class_feature_histograms, get_cifar100_dataloaders
 # from sparselearning.flops import print_model_param_nums,count_model_param_flops,print_inf_time
+import matplotlib.pyplot as plt
 
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -175,8 +176,21 @@ def evaluate(args, model, device, test_loader, is_test_set=False):
         'Test evaluation' if is_test_set else 'Evaluation',
         test_loss, correct, n, 100. * correct / float(n)))
     return correct / float(n)
-    
 
+
+def visualize_overlap_history(self):
+    """Visualize the history of UMM-HE overlap percentages"""
+
+    iterations, overlaps = zip(*self.overlap_history)
+
+    plt.figure(figsize=(10, 6))
+    plt.plot(iterations, overlaps, 'o-')
+    plt.xlabel('Training Iteration')
+    plt.ylabel('UMM-HE Overlap (%)')
+    plt.title('Overlap Between UMM and HE Channel Selection')
+    plt.grid(True)
+    plt.savefig('channel_selection_overlap.png')
+    print(f"Average overlap: {sum(overlaps) / len(overlaps):.2f}%")
 
 def main():
 
@@ -232,7 +246,7 @@ def main():
 
 
 
-    parser.add_argument('--layer_interval', default=10, type=int,help='wider_interval')
+    parser.add_argument('--layer_interval', default=10, type=int,help='wider_interval')         # channel pruning every this many iterations
     parser.add_argument('--start_layer_rate', default=0.1, type=float,help='layer_ratio')
 
 
@@ -455,6 +469,7 @@ def main():
 
         print (model )
 
+        visualize_overlap_history(mask)
 
 
 
