@@ -561,84 +561,69 @@ class Masking(object):
     #     return acceptable_score
 
     def hyperspherical_channel_energy(self, index):
-        # Get the weight tensor from the module
+        """Calculate hyperspherical energy for each channel in a layer"""
         weights = self.get_module(index).weight.clone()
         filter_mask = self.filter_names[self.get_mask_name(index)].bool()
-        weights = weights[filter_mask]  # Only consider active channels
+        weights = weights[filter_mask]
 
-        # Skip if no channels left
-        if weights.size(0) == 0:
-            return torch.tensor([])
+        if weights.size(0) <= 1:
+            return torch.zeros(filter_mask.size(0), device=weights.device)
 
         # Flatten each channel into a vector
-        W_flat = weights.view(weights.size(0), -1)  # [num_channels, flattened_filter]
+        W_flat = weights.view(weights.size(0), -1)
 
-        # Normalize channels to unit vectors (project onto hypersphere)
-        W_normalized = F.normalize(W_flat, p=2, dim=1)  # Unit vectors
+        # Normalize to unit vectors
+        norms = torch.norm(W_flat, p=2, dim=1, keepdim=True)
+        W_normalized = W_flat / (norms + 1e-8)
 
         # Compute pairwise similarities
         similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
+        similarity_matrix.fill_diagonal_(0)
 
-        # For hyperspherical energy, we use the sum of similarities
-        # Higher similarity sum = more redundant with other channels
-        channel_scores = similarity_matrix.sum(dim=1) - 1.0  # Subtract 1 to remove self-similarity
+        # Sum similarities for each channel (higher = more redundant)
+        channel_energies = similarity_matrix.sum(dim=1)
 
-        return channel_scores
+        # Map back to original size including pruned channels
+        full_energies = torch.zeros(filter_mask.size(0), device=weights.device)
+        full_energies[filter_mask] = channel_energies
+
+        return full_energies
 
     def prune_score(self, prune_layer_index, total_to_prune):
-        all_umm_scores = []
+        """Determine the global HE threshold for pruning"""
         all_he_scores = []
         all_indices = []
 
+        if total_to_prune <= 0:
+            return float('-inf')  # No pruning needed
+
+        # Convert to integer
+        total_to_prune = int(total_to_prune)
+
         for index in prune_layer_index:
-            # Get UMM scores (existing)
-            weight = torch.abs(self.get_module(index).weight.clone())
-            mask = self.masks[self.get_mask_name(index)]
-            filter_mask = self.filter_names[self.get_mask_name(index)].bool()   # False if channel is entirely pruned
-
-            weight = weight[filter_mask]    # weight of individual weights, ie. (64,64,1,1)
-            mask = mask[filter_mask]    # mask of individual weights, ie. (64,64,1,1)
-
-            umm_scores = []
-            for filter_weight, filter_mask in zip(weight, mask):
-                if self.args.mag_wise:
-                    umm_score = torch.abs(filter_weight).mean().item()  # UMM is the mean of all weights including 0's in a channel
-                    umm_scores.append(umm_score)
-
-            # Get HE scores (using the faster method)
+            # Get HE scores for this layer
             he_scores = self.hyperspherical_channel_energy(index)
-
-            # Skip if layer has no channels left
             if len(he_scores) == 0:
                 continue
 
-            all_umm_scores.extend(umm_scores)
-            all_he_scores.extend(he_scores.tolist())
-            all_indices.extend([(index, i) for i in range(len(umm_scores))])
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            for i, (is_active, score) in enumerate(zip(filter_mask, he_scores)):
+                if is_active:
+                    all_he_scores.append(score.item())
+                    all_indices.append((index, i))
 
-        # Normalize scores
-        if len(all_umm_scores) == 0 or len(all_he_scores) == 0:
-            return float('inf')  # No pruning needed
+        if len(all_he_scores) == 0:
+            return float('-inf')  # No active channels to prune
 
-        umm_array = np.array(all_umm_scores)
-        he_array = np.array(all_he_scores)
+        # Sort by HE (higher is pruned)
+        # For HE, we want to prune channels with highest energy (most redundant)
+        sorted_indices = np.argsort(all_he_scores)[::-1]  # Descending order
 
-        # Min-max normalization, map scores to 0-1
-        norm_umm = (umm_array - umm_array.min()) / (umm_array.max() - umm_array.min() + 1e-8)
-        norm_he = (he_array - he_array.min()) / (he_array.max() - he_array.min() + 1e-8)
+        # Get the threshold - channels with HE >= this will be pruned
+        threshold_idx = min(total_to_prune, len(sorted_indices)) - 1
+        threshold = all_he_scores[sorted_indices[threshold_idx]]
 
-        # Combine scores - lower UMM and higher HE means better candidate for pruning
-        alpha = 1.0  # Balance between UMM and HE
-        combined_scores = (1 - alpha) * (1 - norm_umm) + alpha * norm_he        # we want lowest UMM (least magnitude) and highest HE (most redundant)
-
-        # Find threshold
-        threshold_idx = int(total_to_prune)
-        if threshold_idx > 0:
-            threshold = np.sort(combined_scores)[-threshold_idx]
-            print(threshold)
-            return threshold
-        else:
-            return float('inf')  # No pruning needed
+        return threshold
 
 
 
@@ -728,251 +713,73 @@ class Masking(object):
         return overlap_percent
 
     def del_layer(self):
-        #################################prune layer#############################
+        """Modified del_layer that uses HE with layer-wise thresholds"""
+        print("===========del layer with layer-wise HE===============")
 
-        print ("before del layer")
-        self.get_cfg()
+        # Calculate how many channels to prune overall
+        filter_number = self.filter_num()
+        rate = 1 - self.layer_rate
+        total_to_prune = filter_number - self.baseline_filter_num * rate
+        print(f"Total channels to prune: {total_to_prune}")
 
-        print ("current all fitler num",self.filter_num())
+        if total_to_prune <= 0:
+            print("No channels to prune")
+            return
 
+        # Distribute pruning across layers
+        pruned_so_far = 0
 
-   
+        for active_prune_key in self.module.layer2split:
+            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
-        ### layer wise prune ratio
+            # Get active filter mask
+            filter_mask = self.filter_names[self.get_mask_name(active_prune_key)]
+            active_channels = filter_mask.sum().item()
 
-        filter_numer=self.filter_num()      # current num of filters
+            # Calculate layer's target pruning amount (proportional to its size)
+            layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
 
-        if self.args.gpm_filter_pune:
-            rate = self.layer_rate 
-        else:
-            rate=self.args.start_layer_rate-self.layer_rate
-        rate=1-rate
-        print ("to keep rate",rate)
-        print (filter_numer, self.baseline_filter_num*rate  )       # target filter num to keep
-        total_to_prune=filter_numer-self.baseline_filter_num*rate
-        print ("total_to_prune",total_to_prune)
-            
+            # Ensure we don't over-prune
+            remaining_to_prune = total_to_prune - pruned_so_far
+            layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
 
-        if total_to_prune>=0:
+            # Check minimum layer size constraint
+            min_size = self.minimum_layer.get(active_prune_key, 1)
+            max_prune = active_channels - min_size
+            layer_prune_amount = min(layer_prune_amount, max_prune)
 
+            if layer_prune_amount <= 0:
+                continue
 
-            ### mask the position
+            # Calculate HE for this layer
+            he_scores = self.hyperspherical_channel_energy(active_prune_key)
 
-            layer_prune={}
-            residual_layer={}
- 
+            # Get indices to prune (highest HE = most redundant)
+            active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)  # Move to same device
+            active_he_scores = he_scores[filter_mask.bool()]
 
-            residual=9999
-            i=0
-            while residual > 0 and i < 1000:
+            # Sort by HE (higher is pruned)
+            _, sorted_indices = torch.sort(active_he_scores, descending=True)
 
+            # Fix: Ensure both tensors are on the same device
+            sorted_indices = sorted_indices[:layer_prune_amount].to(active_indices.device)
+            indices_to_prune = active_indices[sorted_indices]
 
-                residual=0
+            # Move back to CPU for list conversion
+            del_ind = indices_to_prune.cpu().tolist()
 
-                # to prune layer 
-                prune_layer_index=[]
-                for l_index in self.module.layer2split:
-                    if l_index not in residual_layer.keys():
-                        prune_layer_index.append(l_index) 
-                
-                # to prune num
-                total_to_prune=filter_numer-self.baseline_filter_num*rate
-                pruned=[]
-                for n_index in layer_prune:
-                    pruned.extend(layer_prune[n_index] )
-                total_to_prune=total_to_prune-len(pruned)
-                print ("len(pruned)",len(pruned))
-                print ("total_to_prune",total_to_prune)
+            # Set pruning masks
+            self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
+            self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
 
-                if total_to_prune>0:
+            pruned_so_far += len(del_ind)
+            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels} channels based on HE")
 
-                    overlap_percent = self.compare_channel_selection(prune_layer_index, total_to_prune)
-                    print(f"Channel selection overlap: {overlap_percent:.2f}%")
-                    
-                    acceptable_score=self.prune_score(prune_layer_index,total_to_prune)
+        # Apply masks
+        self.update_filter_mask()
+        self.apply_mask()
 
-
-                    tem_layer_prune={}
-                    for index in self.module.layer2split:
-
-
-                        if index not in residual_layer.keys():
-                    
-                            weight=  torch.abs(self.get_module(index).weight.clone())
-                            mask=self.masks[self.get_mask_name(index)]
-
-                            del_ind=[]
-                            filter_index=0
-                            layer_weight_magnitude=[]
-                            for filter_weight,filter_mask,filter_name in zip(weight, mask,self.filter_names[self.get_mask_name(index)]):
-                                
-                                if filter_name==1.0:
-                    
-
-                                    ### diffrent metric
-                                    if self.args.mask_wise:
-                                        weight_magnitude = torch.abs(filter_weight)  [filter_mask.bool()] .mean().item()
-
-                                    elif self.args.mag_wise:
-                                        weight_magnitude = torch.abs(filter_weight) .mean().item()
-
-
-                                    elif self.args.kernal_wise:
-                                        vector = filter_weight.view(filter_weight.size(0), -1).sum(dim=1)
-                                        # print("vector",vector.shape)
-                                        weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
-
-                                    elif self.args.connection_wise:    
-                                        vector= filter_weight
-                                        weight_magnitude=((vector!=0).sum().int().item()/vector.numel())
-
-
-
-                                    if weight_magnitude<=acceptable_score:
-                                        del_ind.append(filter_index)
-
-                                        layer_weight_magnitude.append(weight_magnitude)
-                                filter_index+=1
-
-                            # current layer
-                            # if index not in layer_prune.keys():
-                            current=self.filter_names[self.get_mask_name(index)].sum().item()
-                            # else:
-                            #     current=self.filter_names[self.get_mask_name(index)].sum().item()-len(layer_prune[index])
-
-
-                            single_residual=self.minimum_layer[index]-(current-len( del_ind))
-                            print ("index",index,"prune",len( del_ind),'current',current,"minimum_layer",self.minimum_layer[index],"single_residual",single_residual)
-
-
-                            if index not in tem_layer_prune.keys(): tem_layer_prune[index]=[]
-
-                            if single_residual>0:
-                                residual+=single_residual
-                                prune_lengh=int(current-self.minimum_layer[index] )
-
-                                
-
-
-
-                                layer_weight_magnitude=np.array(layer_weight_magnitude)
-                                tem_layer_prune[index].extend (np.array(del_ind) [ np.argsort(layer_weight_magnitude)[:prune_lengh]]  )
-                                residual_layer[index]=single_residual
-
-
-                            else:
-
-                                tem_layer_prune[index].extend(del_ind)
-
-                            print ("layer_prune[index]",index,"len",len(tem_layer_prune[index]))
-
-
-
-
-
-                    init_to_prune=0
-                    for layer in tem_layer_prune:
-                        init_to_prune+= len(tem_layer_prune[layer])
-
-                    print ("init_to_prune",init_to_prune)
- 
-                    # print ("layer_prune",layer_prune)
-
-                    if init_to_prune!=0 and total_to_prune<init_to_prune:
-                        print ("sample")
-
-
-                        ratio=  total_to_prune/ init_to_prune
-                        # when more channels for pruning than needed, randomly select a subset
-                        for layer in tem_layer_prune:
-                            tem_layer_prune[layer]= random.sample (tem_layer_prune[layer], int( round(ratio*len(tem_layer_prune[layer]))))
-                    
-
-                    print ("add temp to the final")
-  
-                    for index in self.module.layer2split:
-
-                        if index not in layer_prune.keys(): layer_prune[index]=[]
-
-                        if index in  tem_layer_prune:
-
-                            layer_prune[index].extend(  tem_layer_prune[index] )
-
-
-
-
-
-                    # print ("layer_prune",layer_prune)
-                # to prune num
-
-                pruned=[]
-                for n_index in layer_prune:
-                    print (n_index,len(layer_prune[n_index]))
-                    pruned.extend(layer_prune[n_index] )
-
-
-
-                print ("======residual",residual,"pruned",len(pruned))
-
-
-                ###### layer prune
-
-
-                print ("begin to prune")
-                for active_prune_key in self.module.layer2split:
-                    passive_prune_key,norm_key=self.module.next_layers[active_prune_key]
-
-
-                    
-        
-                    if len(self.get_mask_name(active_prune_key))>0:
-
-
-                        self.del_func(layer_prune[active_prune_key],
-                                            active_prune_key,
-                                            passive_prune_key)
-
-
-                print ("pruneing layer",self.get_cfg())
-                print ("current all fitler num",self.filter_num())
-                print ("pruned",filter_numer-self.filter_num() )
-
-
-
-
-
-
-
-
-                if i == 1000:
-                    print('Error resolving the residual! Layers are too full! Residual left over: {0}'.format(residual))
-
-
-
-
-
-
-            ###### layer prune
-
-            for active_prune_key in self.module.layer2split:
-                passive_prune_key,norm_key=self.module.next_layers[active_prune_key]
-
-
-                
-    
-                if len(self.get_mask_name(active_prune_key))>0:
-
-
-                    self.del_func(layer_prune[active_prune_key],
-                                        active_prune_key,
-                                        passive_prune_key)
-
-
-            print ("pruneing layer",self.get_cfg())
-            print ("current all fitler num",self.filter_num())
-            print ("pruned",filter_numer-self.filter_num() )
-
-
+        print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
 
         

@@ -178,19 +178,6 @@ def evaluate(args, model, device, test_loader, is_test_set=False):
     return correct / float(n)
 
 
-def visualize_overlap_history(self):
-    """Visualize the history of UMM-HE overlap percentages"""
-
-    iterations, overlaps = zip(*self.overlap_history)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(iterations, overlaps, 'o-')
-    plt.xlabel('Training Iteration')
-    plt.ylabel('UMM-HE Overlap (%)')
-    plt.title('Overlap Between UMM and HE Channel Selection')
-    plt.grid(True)
-    plt.savefig('channel_selection_overlap.png')
-    print(f"Average overlap: {sum(overlaps) / len(overlaps):.2f}%")
 
 def main():
 
@@ -468,9 +455,6 @@ def main():
         val_acc = evaluate(args, model, device, valid_loader)
 
         print (model )
-
-        visualize_overlap_history(mask)
-
 
 
         print ("Congs!! ALL DONE, GOOD JOB!!")
