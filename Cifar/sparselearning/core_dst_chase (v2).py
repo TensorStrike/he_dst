@@ -589,59 +589,41 @@ class Masking(object):
 
         return full_energies
 
-    def hyperspherical_channel_energy_half_space(self, index, power=2):
-        weights = self.get_module(index).weight.clone()
-        filter_mask = self.filter_names[self.get_mask_name(index)].bool()
-        weights = weights[filter_mask]
+    def prune_score(self, prune_layer_index, total_to_prune):
+        """Determine the global HE threshold for pruning"""
+        all_he_scores = []
+        all_indices = []
 
-        if weights.size(0) <= 1:
-            return torch.zeros(filter_mask.size(0), device=weights.device)
+        if total_to_prune <= 0:
+            return float('-inf')  # No pruning needed
 
-        # Flatten each channel into a vector
-        W_flat = weights.view(weights.size(0), -1)
+        # Convert to integer
+        total_to_prune = int(total_to_prune)
 
-        # Create virtual negative filters (half-space approach)
-        W_neg = -W_flat
-        W_combined = torch.cat([W_flat, W_neg], dim=0)
+        for index in prune_layer_index:
+            # Get HE scores for this layer
+            he_scores = self.hyperspherical_channel_energy(index)
+            if len(he_scores) == 0:
+                continue
 
-        # Normalize to unit vectors
-        W_normalized = F.normalize(W_combined, p=2, dim=1)
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            for i, (is_active, score) in enumerate(zip(filter_mask, he_scores)):
+                if is_active:
+                    all_he_scores.append(score.item())
+                    all_indices.append((index, i))
 
-        # Compute pairwise dot products
-        similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
+        if len(all_he_scores) == 0:
+            return float('-inf')  # No active channels to prune
 
-        # Convert to squared Euclidean distance: ||u-v||² = 2 - 2(u·v) for unit vectors
-        distance_squared = 2.0 - 2.0 * similarity_matrix
+        # Sort by HE (higher is pruned)
+        # For HE, we want to prune channels with highest energy (most redundant)
+        sorted_indices = np.argsort(all_he_scores)[::-1]  # Descending order
 
-        # Add small epsilon to diagonal to avoid division by zero
-        eye = torch.eye(distance_squared.size(0), device=distance_squared.device)
-        distance_squared = distance_squared + eye * 1e-8
+        # Get the threshold - channels with HE >= this will be pruned
+        threshold_idx = min(total_to_prune, len(sorted_indices)) - 1
+        threshold = all_he_scores[sorted_indices[threshold_idx]]
 
-        # Calculate energy as inverse power of distance
-        if power == 2:
-            energy_matrix = 1.0 / distance_squared
-        elif power == 1:
-            energy_matrix = 1.0 / torch.sqrt(distance_squared)
-        else:  # power == 0
-            energy_matrix = -torch.log(distance_squared)
-
-        # Zero out diagonal
-        energy_matrix = energy_matrix * (1.0 - eye)
-
-        # Only consider upper triangular to avoid counting pairs twice
-        energy_matrix = torch.triu(energy_matrix, diagonal=1)
-
-        # Calculate total energy for each filter (sum across row and column)
-        n_original = W_flat.size(0)
-        row_energy = energy_matrix[:n_original, :].sum(dim=1)
-        col_energy = energy_matrix[:, :n_original].sum(dim=0)
-        filter_energy = row_energy + col_energy
-
-        # Map back to original size including pruned channels
-        full_energies = torch.zeros(filter_mask.size(0), device=weights.device)
-        full_energies[filter_mask] = filter_energy
-
-        return full_energies
+        return threshold
 
 
 
@@ -668,8 +650,8 @@ class Masking(object):
         print("===========del layer with layer-wise HE===============")
 
         # Calculate how many channels to prune overall
-        filter_number = self.filter_num()   # current num of filters in the network
-        rate = 1 - self.layer_rate      # target density
+        filter_number = self.filter_num()
+        rate = 1 - self.layer_rate
         total_to_prune = filter_number - self.baseline_filter_num * rate
         print(f"Total channels to prune: {total_to_prune}")
 
@@ -702,9 +684,8 @@ class Masking(object):
             if layer_prune_amount <= 0:
                 continue
 
-            # if has been pruned, calculate HE for this layer
-            # he_scores = self.hyperspherical_channel_energy(active_prune_key)
-            he_scores = self.hyperspherical_channel_energy_half_space(active_prune_key)
+            # Calculate HE for this layer
+            he_scores = self.hyperspherical_channel_energy(active_prune_key)
 
             # Get indices to prune (highest HE = most redundant)
             active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)  # Move to same device
@@ -713,6 +694,7 @@ class Masking(object):
             # Sort by HE (higher is pruned)
             _, sorted_indices = torch.sort(active_he_scores, descending=True)
 
+            # Fix: Ensure both tensors are on the same device
             sorted_indices = sorted_indices[:layer_prune_amount].to(active_indices.device)
             indices_to_prune = active_indices[sorted_indices]
 
