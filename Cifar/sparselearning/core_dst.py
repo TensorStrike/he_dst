@@ -708,8 +708,10 @@ class Masking(object):
             active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)  # Move to same device
             active_he_scores = he_scores[filter_mask.bool()]
 
-            # Sort by HE (higher is pruned)
+            # Sort by HE (higher is pruned), set to false if prune smallest
             _, sorted_indices = torch.sort(active_he_scores, descending=True)
+            _, sorted_indices = torch.sort(active_he_scores, descending=False)
+
 
             sorted_indices = sorted_indices[:layer_prune_amount].to(active_indices.device)
             indices_to_prune = active_indices[sorted_indices]
