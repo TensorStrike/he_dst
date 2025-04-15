@@ -560,8 +560,10 @@ class Masking(object):
     #
     #     return acceptable_score
 
-    def hyperspherical_channel_energy(self, index):
-        """Calculate hyperspherical energy for each channel in a layer"""
+    def hyperspherical_channel_energy(self, index, model='half_mhe', power=-2):
+        """
+        Compute the hyperspherical energy of channels.
+        """
         weights = self.get_module(index).weight.clone()
         filter_mask = self.filter_names[self.get_mask_name(index)].bool()
         weights = weights[filter_mask]
@@ -572,37 +574,12 @@ class Masking(object):
         # Flatten each channel into a vector
         W_flat = weights.view(weights.size(0), -1)
 
-        # Normalize to unit vectors
-        norms = torch.norm(W_flat, p=2, dim=1, keepdim=True)
-        W_normalized = W_flat / (norms + 1e-8)
-
-        # Compute pairwise similarities
-        similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
-        similarity_matrix.fill_diagonal_(0)
-
-        # Sum similarities for each channel (higher = more redundant)
-        channel_energies = similarity_matrix.sum(dim=1)
-
-        # Map back to original size including pruned channels
-        full_energies = torch.zeros(filter_mask.size(0), device=weights.device)
-        full_energies[filter_mask] = channel_energies
-
-        return full_energies
-
-    def hyperspherical_channel_energy_half_space(self, index, power=2):
-        weights = self.get_module(index).weight.clone()
-        filter_mask = self.filter_names[self.get_mask_name(index)].bool()
-        weights = weights[filter_mask]
-
-        if weights.size(0) <= 1:
-            return torch.zeros(filter_mask.size(0), device=weights.device)
-
-        # Flatten each channel into a vector
-        W_flat = weights.view(weights.size(0), -1)
-
-        # Create virtual negative filters (half-space approach)
-        W_neg = -W_flat
-        W_combined = torch.cat([W_flat, W_neg], dim=0)
+        # Create virtual negative filters for half-space model
+        if model == 'half_mhe':
+            W_neg = -W_flat
+            W_combined = torch.cat([W_flat, W_neg], dim=0)
+        else:
+            W_combined = W_flat
 
         # Normalize to unit vectors
         W_normalized = F.normalize(W_combined, p=2, dim=1)
@@ -610,28 +587,38 @@ class Masking(object):
         # Compute pairwise dot products
         similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
 
-        # Convert to squared Euclidean distance: ||u-v||² = 2 - 2(u·v) for unit vectors
-        distance_squared = 2.0 - 2.0 * similarity_matrix
+        # Clamp similarity to avoid numerical issues with acos
+        epsilon = 1e-4
+        similarity_matrix = torch.clamp(similarity_matrix, -1 + epsilon, 1 - epsilon)
 
-        # Add small epsilon to diagonal to avoid division by zero
-        eye = torch.eye(distance_squared.size(0), device=distance_squared.device)
-        distance_squared = distance_squared + eye * 1e-8
+        # Compute pairwise distances based on the specified power
+        if power > 0:
+            # Euclidean distance: ||u - v||^2 = 2 - 2 * (u · v)
+            distance_squared = 2.0 - 2.0 * similarity_matrix
+            # Add small epsilon to diagonal to avoid division by zero
+            eye = torch.eye(distance_squared.size(0), device=distance_squared.device)
+            distance_squared = distance_squared + eye * epsilon
 
-        # Calculate energy as inverse power of distance
-        if power == 2:
-            energy_matrix = 1.0 / distance_squared
-        elif power == 1:
-            energy_matrix = 1.0 / torch.sqrt(distance_squared)
-        else:  # power == 0
-            energy_matrix = -torch.log(distance_squared)
+            if power == 1:
+                energy_matrix = 1.0 / torch.sqrt(distance_squared)
+            else:  # power > 1
+                energy_matrix = torch.pow(distance_squared, -power / 2.0)
+        elif power == 0:
+            raise Exception("log not supported")
+        else:
+            # Angular distance: arccos(u · v) / π
+            angular_distances = torch.acos(similarity_matrix) / math.pi
+            angular_distances = angular_distances + epsilon  # avoid division by zero
+            energy_matrix = torch.pow(angular_distances, power)
 
-        # Zero out diagonal
+        # Zero out diagonal elements (self-interactions)
+        eye = torch.eye(energy_matrix.size(0), device=energy_matrix.device)
         energy_matrix = energy_matrix * (1.0 - eye)
 
-        # Only consider upper triangular to avoid counting pairs twice
+        # Only consider upper triangular part to avoid counting pairs twice
         energy_matrix = torch.triu(energy_matrix, diagonal=1)
 
-        # Calculate total energy for each filter (sum across row and column)
+        # Sum energy for each channel
         n_original = W_flat.size(0)
         row_energy = energy_matrix[:n_original, :].sum(dim=1)
         col_energy = energy_matrix[:, :n_original].sum(dim=0)
@@ -643,52 +630,7 @@ class Masking(object):
 
         return full_energies
 
-    def hyperspherical_channel_energy_angular(self, index, power=2):
-        """Calculate angular hyperspherical energy for channels with power=a2"""
-        weights = self.get_module(index).weight.clone()
-        filter_mask = self.filter_names[self.get_mask_name(index)].bool()
-        weights = weights[filter_mask]
 
-        if weights.size(0) <= 1:
-            return torch.zeros(filter_mask.size(0), device=weights.device)
-
-        # Flatten each channel into a vector
-        W_flat = weights.view(weights.size(0), -1)
-
-        # Normalize to unit vectors
-        W_normalized = F.normalize(W_flat, p=2, dim=1)
-
-        # Compute cosine similarities
-        similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
-
-        # Apply arccos to get angular distances (in radians)
-        # Add small epsilon to avoid numerical issues
-        epsilon = 1e-5
-        # Clamp similarity to [-1+epsilon, 1-epsilon] to avoid numerical issues with acos
-        similarity_matrix = torch.clamp(similarity_matrix, -1 + epsilon, 1 - epsilon)
-        angular_distances = torch.acos(similarity_matrix) / math.pi  # Normalize to [0,1]
-
-        # Add small epsilon to avoid division by zero
-        angular_distances = angular_distances + epsilon
-
-        # Calculate energy as inverse squared angular distance (a2 power)
-        energy_matrix = torch.pow(angular_distances, -2.0)
-
-        # Zero out diagonal elements (self-interactions)
-        eye = torch.eye(energy_matrix.size(0), device=energy_matrix.device)
-        energy_matrix = energy_matrix * (1.0 - eye)
-
-        # Only consider upper triangular part to avoid counting pairs twice
-        energy_matrix = torch.triu(energy_matrix, diagonal=1)
-
-        # Sum energy for each channel
-        channel_energies = energy_matrix.sum(dim=1) + energy_matrix.sum(dim=0)
-
-        # Map back to original size including pruned channels
-        full_energies = torch.zeros(filter_mask.size(0), device=weights.device)
-        full_energies[filter_mask] = channel_energies
-
-        return full_energies
 
     def gradual_pruning_rate(self,
             step: int,
@@ -750,7 +692,7 @@ class Masking(object):
             # if has been pruned, calculate HE for this layer
             # he_scores = self.hyperspherical_channel_energy(active_prune_key)
             # he_scores = self.hyperspherical_channel_energy_half_space(active_prune_key)
-            he_scores = self.hyperspherical_channel_energy_angular(active_prune_key)
+            he_scores = self.hyperspherical_channel_energy(active_prune_key)
 
             # Get indices to prune (highest HE = most redundant)
             active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)  # Move to same device
