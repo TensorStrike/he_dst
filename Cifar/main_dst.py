@@ -23,7 +23,7 @@ import torch.nn as nn
 
 
 
-from sparselearning.core_dst_chase import Masking, CosineDecay, LinearDecay
+from sparselearning.core_dst import Masking, CosineDecay, LinearDecay
 from sparselearning.models import AlexNet, VGG16, LeNet_300_100, LeNet_5_Caffe, WideResNet, MLP_CIFAR10,MLP_CIFAR100
 from sparselearning.resnet_cifar100 import ResNet34, ResNet18,ResNet50
 from sparselearning.utils import get_mnist_dataloaders, get_cifar10_dataloaders, plot_class_feature_histograms, get_cifar100_dataloaders
