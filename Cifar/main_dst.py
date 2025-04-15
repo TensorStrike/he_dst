@@ -240,7 +240,7 @@ def main():
 
 
 
-    sparselearning.core_dst_chase.add_sparse_args(parser)
+    sparselearning.core_dst.add_sparse_args(parser)
 
     args = parser.parse_args()
     setup_logger(args)
