@@ -710,7 +710,7 @@ class Masking(object):
 
             # Sort by HE (higher is pruned), set to false if prune smallest
             _, sorted_indices = torch.sort(active_he_scores, descending=True)
-            _, sorted_indices = torch.sort(active_he_scores, descending=False)
+            # _, sorted_indices = torch.sort(active_he_scores, descending=False)
 
 
             sorted_indices = sorted_indices[:layer_prune_amount].to(active_indices.device)
