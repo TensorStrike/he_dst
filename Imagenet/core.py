@@ -1968,7 +1968,7 @@ class Masking(object):
 
                 # print ("self.name2nonzeros",self.name2nonzeros)
                 # val = '{0}: {1}, density: {2:.2f} "％"'.format(name,  num_nonzeros,
-                #                                              100*(num_nonzeros) / float(mask.numel()) ) 
+                #                                              100*(num_nonzeros) / float(mask.numel()) )
                 # print(val)
 
                 val = '{0}: {1}, spasity: {2:.2f} "％"'.format(name, num_nonzeros,
@@ -2011,4 +2011,3 @@ class Masking(object):
         total_fired_weights = ntotal_fired_weights / ntotal_weights
         print('The percentage of the total fired weights is:', total_fired_weights)
         return layer_fired_weights, total_fired_weights
-
