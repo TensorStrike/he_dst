@@ -7,6 +7,7 @@ from argparse import ArgumentParser, REMAINDER
 
 import torch
 
+
 def parse_args():
     """
     Helper function parsing the command line options
@@ -77,7 +78,7 @@ def main():
 
         print(cmd)
 
-        stdout = None if local_rank == 0 else open("GPU_"+str(local_rank)+".log", "w")
+        stdout = None if local_rank == 0 else open("GPU_" + str(local_rank) + ".log", "w")
 
         process = subprocess.Popen(cmd, env=current_env, stdout=stdout)
         processes.append(process)
@@ -94,13 +95,13 @@ def main():
                 elif ret != 0:
                     error = True
             time.sleep(1)
-    
+
         if error:
             for p in processes:
                 if p.poll() is None:
                     p.terminate()
             exit(1)
-    
+
     except KeyboardInterrupt:
         for p in processes:
             p.terminate()
