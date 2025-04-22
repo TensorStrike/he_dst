@@ -193,10 +193,10 @@ class Masking(object):
 
     def update_filter_mask(self):
         print ("update_filter_mask")
-        for module in self.modules:
-            for name, tensor in self.module.named_parameters():
-                if name in self.filter_names:
-                    self.filter_masks[name][~self.filter_names[name].bool()]=0
+        for module in self.modules:     # this is a list containing the entire model
+            for name, tensor in self.module.named_parameters(): # iterate layers
+                if name in self.filter_names:   # active layer
+                    self.filter_masks[name][~self.filter_names[name].bool()]=0  # copies over masks from filter_names to filter_masks
                     self.filter_masks[name][self.filter_names[name].bool()]=1
 
 
@@ -204,21 +204,14 @@ class Masking(object):
                 
             for name, tensor in self.module.named_parameters():
                 if name in self.passive_names:
-
-
                     if name in self.filter_names:
-                    
                         filter_mask=self.filter_masks[name]
-
                     else:
                         filter_mask=torch.ones_like(tensor, dtype=torch.float32, requires_grad=False).cuda()
 
-
-                    # transpose
+                    # transpose because we want to prune output channel (dim 0) of layer A and input channel (dim 1) of layer B
                     filter_mask =filter_mask.transpose(0, 1)
                     filter_mask[~self.passive_names[name].bool()]=0
-
-
                     filter_mask.transpose_(0, 1)
 
                     self.filter_masks[name]=filter_mask
@@ -661,15 +654,15 @@ class Masking(object):
 
 
     def del_layer(self):
-        """Modified del_layer that uses HE with layer-wise thresholds"""
         print("===========del layer with layer-wise HE===============")
-
-        # Calculate how many channels to prune overall
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
         filter_number = self.filter_num()   # current num of filters in the network
+        print(filter_number, '/', self.baseline_filter_num, 'channels')
+
         rate = 1 - self.layer_rate      # target density
         total_to_prune = filter_number - self.baseline_filter_num * rate
         print(f"Total channels to prune: {total_to_prune}")
-
         if total_to_prune <= 0:
             print("No channels to prune")
             return
@@ -728,7 +721,14 @@ class Masking(object):
 
         # Apply masks
         self.update_filter_mask()
+        print("After update_filter_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+
         self.apply_mask()
+        print("After apply_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
 
         print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
@@ -1334,30 +1334,17 @@ class Masking(object):
         for name, tensor in module.named_parameters():
             if name in self.passive_names:
                 if name in self.filter_names:
-                
                     filter_mask=self.filter_masks[name]
-
                 else:
                     filter_mask=torch.ones_like(tensor, dtype=torch.float32, requires_grad=False).cuda()
 
-
-
                 # print (filter_mask.shape)
                 filter_mask =filter_mask.transpose(0, 1)
-
-
                 filter_mask[~self.passive_names[name].bool()]=0
                 filter_mask.transpose_(0, 1)
-
                 self.filter_masks[name]=filter_mask
 
                 # print (name,  self.filter_masks[name].sum())
-
-
-
-
-
-
         print('Removing biases...')
         self.remove_weight_partial_name('bias')
         print('Removing 2D batch norms...')
@@ -1374,12 +1361,10 @@ class Masking(object):
 
     def remove_weight(self, name):
         if name in self.masks:
-            print('Removing {0} of size {1} = {2} parameters.'.format(name, self.masks[name].shape,
-                                                                      self.masks[name].numel()))
+            print('Removing {0} of size {1} = {2} parameters.'.format(name, self.masks[name].shape, self.masks[name].numel()))
             self.masks.pop(name)
         elif name + '.weight' in self.masks:
-            print('Removing {0} of size {1} = {2} parameters.'.format(name, self.masks[name + '.weight'].shape,
-                                                                      self.masks[name + '.weight'].numel()))
+            print('Removing {0} of size {1} = {2} parameters.'.format(name, self.masks[name + '.weight'].shape, self.masks[name + '.weight'].numel()))
             self.masks.pop(name + '.weight')
         else:
             print('ERROR', name)
@@ -1389,8 +1374,8 @@ class Masking(object):
         for name in list(self.masks.keys()):
             if partial_name in name:
 
-                print('Removing {0} of size {1} with {2} parameters...'.format(name, self.masks[name].shape,
-                                                                                   np.prod(self.masks[name].shape)))
+                # print('Removing {0} of size {1} with {2} parameters...'.format(name, self.masks[name].shape,
+                #                                                                    np.prod(self.masks[name].shape)))
                 removed.add(name)
                 self.masks.pop(name)
 
