@@ -32,6 +32,9 @@ import resnet as models
 from smoothing import LabelSmoothing
 
 
+print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
+print("torch.cuda.device_count():", torch.cuda.device_count())
+
 def to_python_float(x):
     return x.item() if isinstance(x, torch.Tensor) else float(x)
 
