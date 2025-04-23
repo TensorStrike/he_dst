@@ -343,14 +343,14 @@ class Masking(object):
         filter_names = {}
         passive_names = {}
 
-        for ind in self.module.module.layer2split:
+        for ind in self.base_module.layer2split:
             dim = self.get_module(ind).weight.shape[0]
 
             mask = torch.ones(dim)
             # mask[int(dim/2):]=0
             filter_names[self.get_mask_name(ind)] = mask
 
-            passive_ind = self.module.module.next_layers[ind][0]
+            passive_ind =self.base_module.next_layers[ind][0]
             passive_names[self.get_mask_name(passive_ind)] = mask
 
         self.filter_names = filter_names
@@ -720,17 +720,17 @@ class Masking(object):
         #         self.baseline_nonzero += weight.numel()*density
 
         ## init for layer
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.baseline_filter_num += self.get_module(index).weight.shape[0]
 
         print("baseline fitler num", self.baseline_filter_num)
 
         self.bound_layer = {}
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.bound_layer[index] = int(self.get_module(index).out_channels)
 
         self.minimum_layer = {}
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.minimum_layer[index] = int(
                 self.get_module(index).out_channels * (1 - self.args.start_layer_rate) * self.args.minumum_ratio)
 
@@ -1160,6 +1160,7 @@ class Masking(object):
     def add_module(self, module):
 
         self.module = module
+        self.base_module = module.module if hasattr(module, 'module') else module   # compatibility for 1gpu and multigpu
         self.modules.append(self.module)
         for name, tensor in self.module.named_parameters():
             self.names.append(name)
