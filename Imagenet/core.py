@@ -350,7 +350,7 @@ class Masking(object):
             # mask[int(dim/2):]=0
             filter_names[self.get_mask_name(ind)] = mask
 
-            passive_ind =self.base_module.next_layers[ind][0]
+            passive_ind = self.base_module.next_layers[ind][0]
             passive_names[self.get_mask_name(passive_ind)] = mask
 
         self.filter_names = filter_names
@@ -1161,6 +1161,7 @@ class Masking(object):
 
         self.module = module
         self.base_module = module.module if hasattr(module, 'module') else module   # compatibility for 1gpu and multigpu
+
         self.modules.append(self.module)
         for name, tensor in self.module.named_parameters():
             self.names.append(name)
