@@ -296,10 +296,15 @@ class Masking(object):
                         print("check in", name, "density is", channel_zero / channel_all, "weight magnitue",
                               torch.abs(channel_vector).mean().item())
 
-    def get_module(self, key):
-        # return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
+    # def get_module(self, key):
+    #     return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
 
-        return getattr(getattr(getattr(self.base_module, key[0]), key[1])[key[2]], key[3])
+    def get_module(self, key):
+        m = self.base_module
+        for k in key:
+            # if k is int, index; if str, getattr
+            m = m[k] if isinstance(k, int) else getattr(m, k)
+        return m
 
     def update_filter_mask(self):
         print("update_filter_mask")
