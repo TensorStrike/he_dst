@@ -297,7 +297,9 @@ class Masking(object):
                               torch.abs(channel_vector).mean().item())
 
     def get_module(self, key):
-        return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
+        # return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
+
+        return getattr(getattr(getattr(self.base_module, key[0]), key[1])[key[2]], key[3])
 
     def update_filter_mask(self):
         print("update_filter_mask")
