@@ -1,0 +1,653 @@
+
+
+
+================================================================================
+
+Iteration start: 1/1
+
+==> Preparing data..
+Files already downloaded and verified
+Files already downloaded and verified
+model ResNet50
+Growth mode: global_gradients not supported!
+Supported modes are: ['random', 'momentum', 'momentum_neuron', 'gradient']
+ResNet(
+  (conv1): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+  (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (layer1): Sequential(
+    (0): Bottleneck(
+      (conv1): Conv2d(64, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential(
+        (0): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+        (1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): Bottleneck(
+      (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (2): Bottleneck(
+      (conv1): Conv2d(256, 64, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(64, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+  )
+  (layer2): Sequential(
+    (0): Bottleneck(
+      (conv1): Conv2d(256, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential(
+        (0): Conv2d(256, 512, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): Bottleneck(
+      (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (2): Bottleneck(
+      (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (3): Bottleneck(
+      (conv1): Conv2d(512, 128, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(128, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(128, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+  )
+  (layer3): Sequential(
+    (0): Bottleneck(
+      (conv1): Conv2d(512, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential(
+        (0): Conv2d(512, 1024, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): Bottleneck(
+      (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (2): Bottleneck(
+      (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (3): Bottleneck(
+      (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (4): Bottleneck(
+      (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (5): Bottleneck(
+      (conv1): Conv2d(1024, 256, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(256, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(256, 1024, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(1024, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+  )
+  (layer4): Sequential(
+    (0): Bottleneck(
+      (conv1): Conv2d(1024, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(2, 2), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential(
+        (0): Conv2d(1024, 2048, kernel_size=(1, 1), stride=(2, 2), bias=False)
+        (1): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      )
+    )
+    (1): Bottleneck(
+      (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+    (2): Bottleneck(
+      (conv1): Conv2d(2048, 512, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn1): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv2): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1), bias=False)
+      (bn2): BatchNorm2d(512, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (conv3): Conv2d(512, 2048, kernel_size=(1, 1), stride=(1, 1), bias=False)
+      (bn3): BatchNorm2d(2048, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+      (shortcut): Sequential()
+    )
+  )
+  (classifier): Linear(in_features=2048, out_features=100, bias=False)
+)
+add module
+Removing biases...
+Removed 53 layers.
+Removing 2D batch norms...
+Removing bn1 of size torch.Size([64]) = 64 parameters.
+Removing layer1.0.bn1 of size torch.Size([64]) = 64 parameters.
+Removing layer1.0.bn2 of size torch.Size([64]) = 64 parameters.
+Removing layer1.0.bn3 of size torch.Size([256]) = 256 parameters.
+Removing layer1.0.shortcut.1 of size torch.Size([256]) = 256 parameters.
+Removing layer1.1.bn1 of size torch.Size([64]) = 64 parameters.
+Removing layer1.1.bn2 of size torch.Size([64]) = 64 parameters.
+Removing layer1.1.bn3 of size torch.Size([256]) = 256 parameters.
+Removing layer1.2.bn1 of size torch.Size([64]) = 64 parameters.
+Removing layer1.2.bn2 of size torch.Size([64]) = 64 parameters.
+Removing layer1.2.bn3 of size torch.Size([256]) = 256 parameters.
+Removing layer2.0.bn1 of size torch.Size([128]) = 128 parameters.
+Removing layer2.0.bn2 of size torch.Size([128]) = 128 parameters.
+Removing layer2.0.bn3 of size torch.Size([512]) = 512 parameters.
+Removing layer2.0.shortcut.1 of size torch.Size([512]) = 512 parameters.
+Removing layer2.1.bn1 of size torch.Size([128]) = 128 parameters.
+Removing layer2.1.bn2 of size torch.Size([128]) = 128 parameters.
+Removing layer2.1.bn3 of size torch.Size([512]) = 512 parameters.
+Removing layer2.2.bn1 of size torch.Size([128]) = 128 parameters.
+Removing layer2.2.bn2 of size torch.Size([128]) = 128 parameters.
+Removing layer2.2.bn3 of size torch.Size([512]) = 512 parameters.
+Removing layer2.3.bn1 of size torch.Size([128]) = 128 parameters.
+Removing layer2.3.bn2 of size torch.Size([128]) = 128 parameters.
+Removing layer2.3.bn3 of size torch.Size([512]) = 512 parameters.
+Removing layer3.0.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.0.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.0.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.0.shortcut.1 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.1.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.1.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.1.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.2.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.2.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.2.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.3.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.3.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.3.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.4.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.4.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.4.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer3.5.bn1 of size torch.Size([256]) = 256 parameters.
+Removing layer3.5.bn2 of size torch.Size([256]) = 256 parameters.
+Removing layer3.5.bn3 of size torch.Size([1024]) = 1024 parameters.
+Removing layer4.0.bn1 of size torch.Size([512]) = 512 parameters.
+Removing layer4.0.bn2 of size torch.Size([512]) = 512 parameters.
+Removing layer4.0.bn3 of size torch.Size([2048]) = 2048 parameters.
+Removing layer4.0.shortcut.1 of size torch.Size([2048]) = 2048 parameters.
+Removing layer4.1.bn1 of size torch.Size([512]) = 512 parameters.
+Removing layer4.1.bn2 of size torch.Size([512]) = 512 parameters.
+Removing layer4.1.bn3 of size torch.Size([2048]) = 2048 parameters.
+Removing layer4.2.bn1 of size torch.Size([512]) = 512 parameters.
+Removing layer4.2.bn2 of size torch.Size([512]) = 512 parameters.
+Removing layer4.2.bn3 of size torch.Size([2048]) = 2048 parameters.
+Removing 1D batch norms...
+baseline fitler num 7552
+initialize by fixed_ERK
+Sparsity of var:conv1.weight had to be set to 0.
+Sparsity of var:layer1.0.conv1.weight had to be set to 0.
+layer: conv1.weight, shape: torch.Size([64, 3, 3, 3]), density: 1.0
+layer: layer1.0.conv1.weight, shape: torch.Size([64, 64, 1, 1]), density: 1.0
+layer: layer1.0.conv2.weight, shape: torch.Size([64, 64, 3, 3]), density: 0.16747319723795276
+layer: layer1.0.conv3.weight, shape: torch.Size([256, 64, 1, 1]), density: 0.9054800850663938
+layer: layer1.0.shortcut.0.weight, shape: torch.Size([256, 64, 1, 1]), density: 0.9054800850663938
+layer: layer1.1.conv1.weight, shape: torch.Size([64, 256, 1, 1]), density: 0.9054800850663938
+layer: layer1.1.conv2.weight, shape: torch.Size([64, 64, 3, 3]), density: 0.16747319723795276
+layer: layer1.1.conv3.weight, shape: torch.Size([256, 64, 1, 1]), density: 0.9054800850663938
+layer: layer1.2.conv1.weight, shape: torch.Size([64, 256, 1, 1]), density: 0.9054800850663938
+layer: layer1.2.conv2.weight, shape: torch.Size([64, 64, 3, 3]), density: 0.16747319723795276
+layer: layer1.2.conv3.weight, shape: torch.Size([256, 64, 1, 1]), density: 0.9054800850663938
+layer: layer2.0.conv1.weight, shape: torch.Size([128, 256, 1, 1]), density: 0.5427256410491118
+layer: layer2.0.conv2.weight, shape: torch.Size([128, 128, 3, 3]), density: 0.08186189864989481
+layer: layer2.0.conv3.weight, shape: torch.Size([512, 128, 1, 1]), density: 0.4513340175563857
+layer: layer2.0.shortcut.0.weight, shape: torch.Size([512, 256, 1, 1]), density: 0.2706598080361503
+layer: layer2.1.conv1.weight, shape: torch.Size([128, 512, 1, 1]), density: 0.4513340175563857
+layer: layer2.1.conv2.weight, shape: torch.Size([128, 128, 3, 3]), density: 0.08186189864989481
+layer: layer2.1.conv3.weight, shape: torch.Size([512, 128, 1, 1]), density: 0.4513340175563857
+layer: layer2.2.conv1.weight, shape: torch.Size([128, 512, 1, 1]), density: 0.4513340175563857
+layer: layer2.2.conv2.weight, shape: torch.Size([128, 128, 3, 3]), density: 0.08186189864989481
+layer: layer2.2.conv3.weight, shape: torch.Size([512, 128, 1, 1]), density: 0.4513340175563857
+layer: layer2.3.conv1.weight, shape: torch.Size([128, 512, 1, 1]), density: 0.4513340175563857
+layer: layer2.3.conv2.weight, shape: torch.Size([128, 128, 3, 3]), density: 0.08186189864989481
+layer: layer2.3.conv3.weight, shape: torch.Size([512, 128, 1, 1]), density: 0.4513340175563857
+layer: layer3.0.conv1.weight, shape: torch.Size([256, 512, 1, 1]), density: 0.2706598080361503
+layer: layer3.0.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.0.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer3.0.shortcut.0.weight, shape: torch.Size([1024, 512, 1, 1]), density: 0.13515415089597377
+layer: layer3.1.conv1.weight, shape: torch.Size([256, 1024, 1, 1]), density: 0.22531550253399008
+layer: layer3.1.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.1.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer3.2.conv1.weight, shape: torch.Size([256, 1024, 1, 1]), density: 0.22531550253399008
+layer: layer3.2.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.2.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer3.3.conv1.weight, shape: torch.Size([256, 1024, 1, 1]), density: 0.22531550253399008
+layer: layer3.3.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.3.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer3.4.conv1.weight, shape: torch.Size([256, 1024, 1, 1]), density: 0.22531550253399008
+layer: layer3.4.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.4.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer3.5.conv1.weight, shape: torch.Size([256, 1024, 1, 1]), density: 0.22531550253399008
+layer: layer3.5.conv2.weight, shape: torch.Size([256, 256, 3, 3]), density: 0.04046227433267702
+layer: layer3.5.conv3.weight, shape: torch.Size([1024, 256, 1, 1]), density: 0.22531550253399008
+layer: layer4.0.conv1.weight, shape: torch.Size([512, 1024, 1, 1]), density: 0.13515415089597377
+layer: layer4.0.conv2.weight, shape: torch.Size([512, 512, 3, 3]), density: 0.02011396841827091
+layer: layer4.0.conv3.weight, shape: torch.Size([2048, 512, 1, 1]), density: 0.11256987470594433
+layer: layer4.0.shortcut.0.weight, shape: torch.Size([2048, 1024, 1, 1]), density: 0.06753313716746152
+layer: layer4.1.conv1.weight, shape: torch.Size([512, 2048, 1, 1]), density: 0.11256987470594433
+layer: layer4.1.conv2.weight, shape: torch.Size([512, 512, 3, 3]), density: 0.02011396841827091
+layer: layer4.1.conv3.weight, shape: torch.Size([2048, 512, 1, 1]), density: 0.11256987470594433
+layer: layer4.2.conv1.weight, shape: torch.Size([512, 2048, 1, 1]), density: 0.11256987470594433
+layer: layer4.2.conv2.weight, shape: torch.Size([512, 512, 3, 3]), density: 0.02011396841827091
+layer: layer4.2.conv3.weight, shape: torch.Size([2048, 512, 1, 1]), density: 0.11256987470594433
+layer: classifier.weight, shape: torch.Size([100, 2048]), density: 0.48322266403046304
+Overall sparsity 0.10000000000000005
+conv1.weight 1728
+layer1.0.conv1.weight 4096
+layer1.0.conv2.weight 36864
+layer1.0.conv3.weight 16384
+layer1.0.shortcut.0.weight 16384
+layer1.1.conv1.weight 16384
+layer1.1.conv2.weight 36864
+layer1.1.conv3.weight 16384
+layer1.2.conv1.weight 16384
+layer1.2.conv2.weight 36864
+layer1.2.conv3.weight 16384
+layer2.0.conv1.weight 32768
+layer2.0.conv2.weight 147456
+layer2.0.conv3.weight 65536
+layer2.0.shortcut.0.weight 131072
+layer2.1.conv1.weight 65536
+layer2.1.conv2.weight 147456
+layer2.1.conv3.weight 65536
+layer2.2.conv1.weight 65536
+layer2.2.conv2.weight 147456
+layer2.2.conv3.weight 65536
+layer2.3.conv1.weight 65536
+layer2.3.conv2.weight 147456
+layer2.3.conv3.weight 65536
+layer3.0.conv1.weight 131072
+layer3.0.conv2.weight 589824
+layer3.0.conv3.weight 262144
+layer3.0.shortcut.0.weight 524288
+layer3.1.conv1.weight 262144
+layer3.1.conv2.weight 589824
+layer3.1.conv3.weight 262144
+layer3.2.conv1.weight 262144
+layer3.2.conv2.weight 589824
+layer3.2.conv3.weight 262144
+layer3.3.conv1.weight 262144
+layer3.3.conv2.weight 589824
+layer3.3.conv3.weight 262144
+layer3.4.conv1.weight 262144
+layer3.4.conv2.weight 589824
+layer3.4.conv3.weight 262144
+layer3.5.conv1.weight 262144
+layer3.5.conv2.weight 589824
+layer3.5.conv3.weight 262144
+layer4.0.conv1.weight 524288
+layer4.0.conv2.weight 2359296
+layer4.0.conv3.weight 1048576
+layer4.0.shortcut.0.weight 2097152
+layer4.1.conv1.weight 1048576
+layer4.1.conv2.weight 2359296
+layer4.1.conv3.weight 1048576
+layer4.2.conv1.weight 1048576
+layer4.2.conv2.weight 2359296
+layer4.2.conv3.weight 1048576
+classifier.weight 204800
+Total Model parameters after init: 2367257 23652032
+Total parameters under sparsity level of 0.1: 0.10008683397688621
+save_dir ./Chase_models/saved_models/test/density_0.1/stop_gmp_epochs_130/epoch_160/layer_interval_1000/start_layer_rate_0.5
+=====================================
+begin pre training
+Train Epoch: 0 [0/50000 (0%)]	Loss: 4.644441 Accuracy: 0/100 (0.000%
+Train Epoch: 0 [10000/50000 (20%)]	Loss: 4.600453 Accuracy: 102/10100 (1.010%
+Train Epoch: 0 [20000/50000 (40%)]	Loss: 4.571197 Accuracy: 302/20100 (1.502%
+Train Epoch: 0 [30000/50000 (60%)]	Loss: 4.429257 Accuracy: 580/30100 (1.927%
+Train Epoch: 0 [40000/50000 (80%)]	Loss: 4.301581 Accuracy: 1034/40100 (2.579%
+current layer rate 0.011449931725079632
+===========del layer===============
+===========del layer with layer-wise HE===============
+Total filter_names items: 7552.0
+Total filter_masks items: 20676608.0
+7552.0 / 7552 channels
+Total channels to prune: 86.46988438780136
+Layer ('layer2', 0, 'conv1'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 0, 'conv2'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 1, 'conv1'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 1, 'conv2'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 2, 'conv1'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 2, 'conv2'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 3, 'conv1'): Pruned 1/128.0 channels based on HE
+Layer ('layer2', 3, 'conv2'): Pruned 1/128.0 channels based on HE
+Layer ('layer3', 0, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 0, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 1, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 1, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 2, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 2, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 3, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 3, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 4, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 4, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 5, 'conv1'): Pruned 2/256.0 channels based on HE
+Layer ('layer3', 5, 'conv2'): Pruned 2/256.0 channels based on HE
+Layer ('layer4', 0, 'conv1'): Pruned 5/512.0 channels based on HE
+Layer ('layer4', 0, 'conv2'): Pruned 5/512.0 channels based on HE
+Layer ('layer4', 1, 'conv1'): Pruned 5/512.0 channels based on HE
+Layer ('layer4', 1, 'conv2'): Pruned 5/512.0 channels based on HE
+Layer ('layer4', 2, 'conv1'): Pruned 5/512.0 channels based on HE
+Layer ('layer4', 2, 'conv2'): Pruned 5/512.0 channels based on HE
+update_filter_mask
+After update_filter_mask:
+Total filter_names items: 7490.0
+Total filter_masks items: 20391071.0
+After apply_mask:
+Total filter_names items: 7490.0
+Total filter_masks items: 20391071.0
+Total pruned: 62/86.46988438780136 channels
+===========done ===============
+
+Training summary: Average loss: 4.5703, Accuracy: 1554/50000 (3.108%)
+
+
+Evaluation: Average loss: 4.0689, Accuracy: 657/10000 (6.570%)
+
+Current learning rate: 0.1. Time taken for epoch: 92.36 seconds.
+
+Train Epoch: 1 [0/50000 (0%)]	Loss: 4.100087 Accuracy: 12/100 (12.000%
+Train Epoch: 1 [10000/50000 (20%)]	Loss: 3.873752 Accuracy: 672/10100 (6.653%
+Train Epoch: 1 [20000/50000 (40%)]	Loss: 3.893879 Accuracy: 1527/20100 (7.597%
+Train Epoch: 1 [30000/50000 (60%)]	Loss: 3.593007 Accuracy: 2514/30100 (8.352%
+Train Epoch: 1 [40000/50000 (80%)]	Loss: 3.723731 Accuracy: 3654/40100 (9.112%
+current mest  death_rate 0.14997080567080823
+
+
+dynamic sparse change prune
+to kill -17336.200000001118 expect 2365203.200000001
+conv1.weight, mask/weight parameters,1728,1728 density 1.0,1.0
+before tensor 4096 mask 4096.0 4096
+layer1.0.conv1.weight, mask/weight parameters,4096,4096 density 1.0,1.0
+before tensor 36864 mask 6206.0 36864
+layer1.0.conv2.weight, mask/weight parameters,6206,6206 density 0.16834852430555555,0.16834852430555555
+before tensor 16384 mask 14835.0 16384
+layer1.0.conv3.weight, mask/weight parameters,14835,14835 density 0.90545654296875,0.90545654296875
+layer1.0.shortcut.0.weight, mask/weight parameters,14829,14829 density 0.90509033203125,0.90509033203125
+before tensor 16384 mask 14823.0 16384
+layer1.1.conv1.weight, mask/weight parameters,14823,14823 density 0.90472412109375,0.90472412109375
+before tensor 36864 mask 6155.0 36864
+layer1.1.conv2.weight, mask/weight parameters,6155,6155 density 0.1669650607638889,0.1669650607638889
+before tensor 16384 mask 14857.0 16384
+layer1.1.conv3.weight, mask/weight parameters,14857,14857 density 0.90679931640625,0.90679931640625
+before tensor 16384 mask 14849.0 16384
+layer1.2.conv1.weight, mask/weight parameters,14849,14849 density 0.90631103515625,0.90631103515625
+before tensor 36864 mask 6104.0 36864
+layer1.2.conv2.weight, mask/weight parameters,6104,6104 density 0.1655815972222222,0.1655815972222222
+before tensor 16384 mask 14785.0 16384
+layer1.2.conv3.weight, mask/weight parameters,14785,14785 density 0.90240478515625,0.90240478515625
+before tensor 32768 mask 17685.0 32768
+layer2.0.conv1.weight, mask/weight parameters,17685,17685 density 0.5439530019685039,0.5439530019685039
+before tensor 147456 mask 11949.0 147456
+layer2.0.conv2.weight, mask/weight parameters,11949,11949 density 0.08231549796432926,0.08231549796432926
+before tensor 65536 mask 29294.0 65536
+layer2.0.conv3.weight, mask/weight parameters,29294,29294 density 0.4505105807086614,0.4505105807086614
+layer2.0.shortcut.0.weight, mask/weight parameters,35383,35383 density 0.26995086669921875,0.26995086669921875
+before tensor 65536 mask 29303.0 65536
+layer2.1.conv1.weight, mask/weight parameters,29303,29303 density 0.4506489911417323,0.4506489911417323
+before tensor 147456 mask 11915.0 147456
+layer2.1.conv2.weight, mask/weight parameters,11915,11915 density 0.08208127527366166,0.08208127527366166
+before tensor 65536 mask 29363.0 65536
+layer2.1.conv3.weight, mask/weight parameters,29363,29363 density 0.45157172736220474,0.45157172736220474
+before tensor 65536 mask 29577.0 65536
+layer2.2.conv1.weight, mask/weight parameters,29577,29577 density 0.45486281988188976,0.45486281988188976
+before tensor 147456 mask 11900.0 147456
+layer2.2.conv2.weight, mask/weight parameters,11900,11900 density 0.08197794173366124,0.08197794173366124
+before tensor 65536 mask 29260.0 65536
+layer2.2.conv3.weight, mask/weight parameters,29260,29260 density 0.4499876968503937,0.4499876968503937
+before tensor 65536 mask 29335.0 65536
+layer2.3.conv1.weight, mask/weight parameters,29335,29335 density 0.45114111712598426,0.45114111712598426
+before tensor 147456 mask 11947.0 147456
+layer2.3.conv2.weight, mask/weight parameters,11947,11947 density 0.08230172015899587,0.08230172015899587
+before tensor 65536 mask 29454.0 65536
+layer2.3.conv3.weight, mask/weight parameters,29454,29454 density 0.45297121062992124,0.45297121062992124
+before tensor 131072 mask 35234.0 131072
+layer3.0.conv1.weight, mask/weight parameters,35234,35234 density 0.27093073326771655,0.27093073326771655
+before tensor 589824 mask 23565.0 589824
+layer3.0.conv2.weight, mask/weight parameters,23565,23565 density 0.04058424783516234,0.04058424783516234
+before tensor 262144 mask 58684.0 262144
+layer3.0.conv3.weight, mask/weight parameters,58684,58684 density 0.22562438484251968,0.22562438484251968
+layer3.0.shortcut.0.weight, mask/weight parameters,70817,70817 density 0.1350727081298828,0.1350727081298828
+before tensor 262144 mask 58903.0 262144
+layer3.1.conv1.weight, mask/weight parameters,58903,58903 density 0.22646638164370078,0.22646638164370078
+before tensor 589824 mask 23652.0 589824
+layer3.1.conv2.weight, mask/weight parameters,23652,23652 density 0.04073408146816294,0.04073408146816294
+before tensor 262144 mask 58435.0 262144
+layer3.1.conv3.weight, mask/weight parameters,58435,58435 density 0.22466704601377951,0.22466704601377951
+before tensor 262144 mask 58171.0 262144
+layer3.2.conv1.weight, mask/weight parameters,58171,58171 density 0.22365203617125984,0.22365203617125984
+before tensor 589824 mask 23172.0 589824
+layer3.2.conv2.weight, mask/weight parameters,23172,23172 density 0.03990741314815963,0.03990741314815963
+before tensor 262144 mask 58825.0 262144
+layer3.2.conv3.weight, mask/weight parameters,58825,58825 density 0.22616649237204725,0.22616649237204725
+before tensor 262144 mask 58729.0 262144
+layer3.3.conv1.weight, mask/weight parameters,58729,58729 density 0.22579739788385828,0.22579739788385828
+before tensor 589824 mask 23627.0 589824
+layer3.3.conv2.weight, mask/weight parameters,23627,23627 density 0.0406910258264961,0.0406910258264961
+before tensor 262144 mask 58919.0 262144
+layer3.3.conv3.weight, mask/weight parameters,58919,58919 density 0.2265278973917323,0.2265278973917323
+before tensor 262144 mask 58593.0 262144
+layer3.4.conv1.weight, mask/weight parameters,58593,58593 density 0.22527451402559054,0.22527451402559054
+before tensor 589824 mask 23534.0 589824
+layer3.4.conv2.weight, mask/weight parameters,23534,23534 density 0.040530858839495455,0.040530858839495455
+before tensor 262144 mask 58099.0 262144
+layer3.4.conv3.weight, mask/weight parameters,58099,58099 density 0.2233752153051181,0.2233752153051181
+before tensor 262144 mask 58640.0 262144
+layer3.5.conv1.weight, mask/weight parameters,58640,58640 density 0.22545521653543307,0.22545521653543307
+before tensor 589824 mask 23534.0 589824
+layer3.5.conv2.weight, mask/weight parameters,23534,23534 density 0.040530858839495455,0.040530858839495455
+before tensor 262144 mask 58636.0 262144
+layer3.5.conv3.weight, mask/weight parameters,58636,58636 density 0.2254398375984252,0.2254398375984252
+before tensor 524288 mask 70092.0 524288
+layer4.0.conv1.weight, mask/weight parameters,70092,70092 density 0.13500832100591717,0.13500832100591717
+before tensor 2359296 mask 47063.0 2359296
+layer4.0.conv2.weight, mask/weight parameters,47063,47063 density 0.020343289498197706,0.020343289498197706
+before tensor 1048576 mask 117015.0 1048576
+layer4.0.conv3.weight, mask/weight parameters,117015,117015 density 0.11269473465236686,0.11269473465236686
+layer4.0.shortcut.0.weight, mask/weight parameters,142133,142133 density 0.06777429580688477,0.06777429580688477
+before tensor 1048576 mask 117503.0 1048576
+layer4.1.conv1.weight, mask/weight parameters,117503,117503 density 0.11316471739398422,0.11316471739398422
+before tensor 2359296 mask 46359.0 2359296
+layer4.1.conv2.weight, mask/weight parameters,46359,46359 density 0.02003898089469323,0.02003898089469323
+before tensor 1048576 mask 116866.0 1048576
+layer4.1.conv3.weight, mask/weight parameters,116866,116866 density 0.1125512358234714,0.1125512358234714
+before tensor 1048576 mask 116765.0 1048576
+layer4.2.conv1.weight, mask/weight parameters,116765,116765 density 0.11245396480522682,0.11245396480522682
+before tensor 2359296 mask 46597.0 2359296
+layer4.2.conv2.weight, mask/weight parameters,46597,46597 density 0.020141857950991618,0.020141857950991618
+before tensor 1048576 mask 117195.0 1048576
+layer4.2.conv3.weight, mask/weight parameters,117195,117195 density 0.1128680889423077,0.1128680889423077
+classifier.weight, mask/weight parameters,98878,98878 density 0.482802734375,0.482802734375
+Total Model parameters after dst: 2347867 2347867
+Total parameters under density level of 0.1: 0.10048006772089695 0.10048006772089695 after dst
+Death rate: 0.14997080567080823
+
+dynamic sparse change grow
+self.total_params*pruning_rate 3547114.2947917376
+self.total_nonzero 2347867.0
+to grow 1199247.2947917376
+len(all_scores) 23366495 21015814
+increse 1199247.0 before_mask 3547113.0 after_mask 3547113.0
+total_nonzero_new None
+conv1.weight, mask/weight parameters,1728,1728 density 1.0,1.0
+before tensor 4096 mask 4096.0 4096
+layer1.0.conv1.weight, mask/weight parameters,4096,4096 density 1.0,1.0
+before tensor 36864 mask 7558.0 36864
+layer1.0.conv2.weight, mask/weight parameters,7558,6206 density 0.2050238715277778,0.16834852430555555
+before tensor 16384 mask 14893.0 16384
+layer1.0.conv3.weight, mask/weight parameters,14893,14835 density 0.90899658203125,0.90545654296875
+layer1.0.shortcut.0.weight, mask/weight parameters,14926,14829 density 0.9110107421875,0.90509033203125
+before tensor 16384 mask 14858.0 16384
+layer1.1.conv1.weight, mask/weight parameters,14858,14823 density 0.9068603515625,0.90472412109375
+before tensor 36864 mask 6443.0 36864
+layer1.1.conv2.weight, mask/weight parameters,6443,6155 density 0.1747775607638889,0.1669650607638889
+before tensor 16384 mask 14875.0 16384
+layer1.1.conv3.weight, mask/weight parameters,14875,14857 density 0.90789794921875,0.90679931640625
+before tensor 16384 mask 14852.0 16384
+layer1.2.conv1.weight, mask/weight parameters,14852,14849 density 0.906494140625,0.90631103515625
+before tensor 36864 mask 6493.0 36864
+layer1.2.conv2.weight, mask/weight parameters,6493,6104 density 0.17613389756944445,0.1655815972222222
+before tensor 16384 mask 14815.0 16384
+layer1.2.conv3.weight, mask/weight parameters,14815,14785 density 0.90423583984375,0.90240478515625
+before tensor 32768 mask 18145.0 32768
+layer2.0.conv1.weight, mask/weight parameters,18145,17685 density 0.558101624015748,0.5439530019685039
+before tensor 147456 mask 17674.0 147456
+layer2.0.conv2.weight, mask/weight parameters,17674,11949 density 0.12175446573115369,0.08231549796432926
+before tensor 65536 mask 31070.0 65536
+layer2.0.conv3.weight, mask/weight parameters,31070,29294 density 0.47782357283464566,0.4505105807086614
+layer2.0.shortcut.0.weight, mask/weight parameters,42315,35383 density 0.32283782958984375,0.26995086669921875
+before tensor 65536 mask 30494.0 65536
+layer2.1.conv1.weight, mask/weight parameters,30494,29303 density 0.46896530511811024,0.4506489911417323
+before tensor 147456 mask 18680.0 147456
+layer2.1.conv2.weight, mask/weight parameters,18680,11915 density 0.12868470181384808,0.08208127527366166
+before tensor 65536 mask 30507.0 65536
+layer2.1.conv3.weight, mask/weight parameters,30507,29363 density 0.4691652312992126,0.45157172736220474
+before tensor 65536 mask 30432.0 65536
+layer2.2.conv1.weight, mask/weight parameters,30432,29577 density 0.46801181102362205,0.45486281988188976
+before tensor 147456 mask 19692.0 147456
+layer2.2.conv2.weight, mask/weight parameters,19692,11900 density 0.13565627131254263,0.08197794173366124
+before tensor 65536 mask 29926.0 65536
+layer2.2.conv3.weight, mask/weight parameters,29926,29260 density 0.4602300688976378,0.4499876968503937
+before tensor 65536 mask 30999.0 65536
+layer2.3.conv1.weight, mask/weight parameters,30999,29335 density 0.47673166830708663,0.45114111712598426
+before tensor 147456 mask 22137.0 147456
+layer2.3.conv2.weight, mask/weight parameters,22137,11947 density 0.15249963833261,0.08230172015899587
+before tensor 65536 mask 30588.0 65536
+layer2.3.conv3.weight, mask/weight parameters,30588,29454 density 0.4704109251968504,0.45297121062992124
+before tensor 131072 mask 43277.0 131072
+layer3.0.conv1.weight, mask/weight parameters,43277,35234 density 0.3327771284448819,0.27093073326771655
+before tensor 589824 mask 105032.0 589824
+layer3.0.conv2.weight, mask/weight parameters,105032,23565 density 0.18088880622205689,0.04058424783516234
+before tensor 262144 mask 73782.0 262144
+layer3.0.conv3.weight, mask/weight parameters,73782,58684 density 0.28367218257874016,0.22562438484251968
+layer3.0.shortcut.0.weight, mask/weight parameters,89207,70817 density 0.1701488494873047,0.1350727081298828
+before tensor 262144 mask 66244.0 262144
+layer3.1.conv1.weight, mask/weight parameters,66244,58903 density 0.25469057578740156,0.22646638164370078
+before tensor 589824 mask 109583.0 589824
+layer3.1.conv2.weight, mask/weight parameters,109583,23652 density 0.18872665523108825,0.04073408146816294
+before tensor 262144 mask 70977.0 262144
+layer3.1.conv3.weight, mask/weight parameters,70977,58435 density 0.2728877030019685,0.22466704601377951
+before tensor 262144 mask 69082.0 262144
+layer3.2.conv1.weight, mask/weight parameters,69082,58171 density 0.2656019315944882,0.22365203617125984
+before tensor 589824 mask 120618.0 589824
+layer3.2.conv2.weight, mask/weight parameters,120618,23172 density 0.20773141546283092,0.03990741314815963
+before tensor 262144 mask 70748.0 262144
+layer3.2.conv3.weight, mask/weight parameters,70748,58825 density 0.2720072588582677,0.22616649237204725
+before tensor 262144 mask 62220.0 262144
+layer3.3.conv1.weight, mask/weight parameters,62220,58729 density 0.23921936515748032,0.22579739788385828
+before tensor 589824 mask 62189.0 589824
+layer3.3.conv2.weight, mask/weight parameters,62189,23627 density 0.10710349198476175,0.0406910258264961
+before tensor 262144 mask 62874.0 262144
+layer3.3.conv3.weight, mask/weight parameters,62874,58919 density 0.2417338213582677,0.2265278973917323
+before tensor 262144 mask 64197.0 262144
+layer3.4.conv1.weight, mask/weight parameters,64197,58593 density 0.24682040477362205,0.22527451402559054
+before tensor 589824 mask 86379.0 589824
+layer3.4.conv2.weight, mask/weight parameters,86379,23534 density 0.14876413086159507,0.040530858839495455
+before tensor 262144 mask 65347.0 262144
+layer3.4.conv3.weight, mask/weight parameters,65347,58099 density 0.2512418491633858,0.2233752153051181
+before tensor 262144 mask 62192.0 262144
+layer3.5.conv1.weight, mask/weight parameters,62192,58640 density 0.2391117125984252,0.22545521653543307
+before tensor 589824 mask 55967.0 589824
+layer3.5.conv2.weight, mask/weight parameters,55967,23534 density 0.09638780388671889,0.040530858839495455
+before tensor 262144 mask 63104.0 262144
+layer3.5.conv3.weight, mask/weight parameters,63104,58636 density 0.24261811023622049,0.2254398375984252
+before tensor 524288 mask 76516.0 524288
+layer4.0.conv1.weight, mask/weight parameters,76516,70092 density 0.14738196499013806,0.13500832100591717
+before tensor 2359296 mask 95260.0 2359296
+layer4.0.conv2.weight, mask/weight parameters,95260,47063 density 0.0411767579116995,0.020343289498197706
+before tensor 1048576 mask 127008.0 1048576
+layer4.0.conv3.weight, mask/weight parameters,127008,117015 density 0.12231878698224852,0.11269473465236686
+layer4.0.shortcut.0.weight, mask/weight parameters,252396,142133 density 0.12035179138183594,0.06777429580688477
+before tensor 1048576 mask 152318.0 1048576
+layer4.1.conv1.weight, mask/weight parameters,152318,117503 density 0.14669432630670612,0.11316471739398422
+before tensor 2359296 mask 346882.0 2359296
+layer4.1.conv2.weight, mask/weight parameters,346882,46359 density 0.1499420127852839,0.02003898089469323
+before tensor 1048576 mask 163522.0 1048576
+layer4.1.conv3.weight, mask/weight parameters,163522,116866 density 0.15748466777613412,0.1125512358234714
+before tensor 1048576 mask 127108.0 1048576
+layer4.2.conv1.weight, mask/weight parameters,127108,116765 density 0.12241509492110454,0.11245396480522682
+before tensor 2359296 mask 95514.0 2359296
+layer4.2.conv2.weight, mask/weight parameters,95514,46597 density 0.04128655107262299,0.020141857950991618
+before tensor 1048576 mask 125032.0 1048576
+layer4.2.conv3.weight, mask/weight parameters,125032,117195 density 0.12041574211045365,0.1128680889423077
+classifier.weight, mask/weight parameters,114342,98878 density 0.558310546875,0.482802734375
+Total Model parameters after dst: 3547113 2347867
+Total parameters under density level of 0.1: 0.15180338343427202 0.10048006772089695 after dst
+Death rate: 0.14997080567080823
+
+
+Training summary: Average loss: 3.8456, Accuracy: 4902/50000 (9.804%)
+
+
+Evaluation: Average loss: 3.6092, Accuracy: 1449/10000 (14.490%)
+
+Current learning rate: 0.1. Time taken for epoch: 90.73 seconds.
+
+Train Epoch: 2 [0/50000 (0%)]	Loss: 3.520292 Accuracy: 14/100 (14.000%
+Train Epoch: 2 [10000/50000 (20%)]	Loss: 3.745243 Accuracy: 1183/10100 (11.713%
+Train Epoch: 2 [20000/50000 (40%)]	Loss: 3.330102 Accuracy: 2630/20100 (13.085%

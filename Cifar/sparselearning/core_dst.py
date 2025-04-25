@@ -12,6 +12,7 @@ import random
 # from sparselearning.funcs import global_magnitude_prune
 from sparselearning.funcs import redistribution_funcs
 # from sparselearning.flops import print_model_param_nums,count_model_param_flops,print_inf_time
+import wandb
 
 def add_sparse_args(parser):
     parser.add_argument('--growth', type=str, default='random', help='Growth mode. Choose from: momentum, random, and momentum_neuron.')
@@ -652,9 +653,68 @@ class Masking(object):
 
         return threshold
 
+    def track_hyperspherical_energy(self):
+        he_values = {}
+        layer_channel_counts = {}
+        layer_stds = {}
+        total_he = 0
+        active_channel_count = 0
+        all_layer_means = []
+
+        # For each prunable layer
+        for index in self.module.layer2split:
+            layer_name = ".".join([str(i) for i in index])
+            # Get HE for each channel in this layer
+            channel_he = self.hyperspherical_channel_energy(index)
+
+            # Filter out pruned channels
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            active_channels = filter_mask.sum().item()
+
+            if active_channels > 0:  # Avoid empty layers
+                # Get HE only for active channels
+                active_he = channel_he[filter_mask]
+
+                # Calculate mean and standard deviation within this layer
+                avg_he = active_he.mean().item()
+                std_he = active_he.std().item()  # Standard deviation within layer
+
+                # Store metrics
+                he_values[layer_name] = avg_he
+                layer_channel_counts[layer_name] = active_channels
+                layer_stds[layer_name] = std_he
+
+                all_layer_means.append(avg_he)
+                total_he += active_he.sum().item()
+                active_channel_count += active_channels
+
+        # Prepare metrics dictionary - global metrics
+        metrics = {
+            "global/total_he": total_he,
+            "global/mean_he": np.mean(all_layer_means) if all_layer_means else 0,
+            "global/min_he": min(he_values.values()) if he_values else 0,
+            "global/max_he": max(he_values.values()) if he_values else 0,
+            "global/active_channels": active_channel_count,
+            "global/step": self.steps
+        }
+
+        # Add per-layer metrics
+        for layer_name, avg_he in he_values.items():
+            channels = layer_channel_counts[layer_name]
+            norm_factor = channels / 64.0  # Normalize relative to a 64-channel layer
+
+            metrics[f"layer/{layer_name}/channel_count"] = channels
+            metrics[f"layer/{layer_name}/mean_he"] = avg_he
+            metrics[f"layer/{layer_name}/normalized_he"] = avg_he / norm_factor
+            metrics[f"layer/{layer_name}/std"] = layer_stds[layer_name]
+
+        wandb.log(metrics)
+
 
     def del_layer(self):
         print("===========del layer with layer-wise HE===============")
+        self.track_hyperspherical_energy()
+
         print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
         print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
         filter_number = self.filter_num()   # current num of filters in the network
@@ -726,6 +786,8 @@ class Masking(object):
         print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
 
         self.apply_mask()
+        self.track_hyperspherical_energy()
+
         print("After apply_mask:")
         print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
         print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")

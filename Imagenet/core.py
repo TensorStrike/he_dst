@@ -548,7 +548,7 @@ class Masking(object):
 
         return threshold
 
-    def hyperspherical_channel_energy(self, index, model='half_mhe', power=2):
+    def hyperspherical_channel_energy(self, index, model='half_mhe', power=-2):
         """Compute the hyperspherical energy of channels."""
         weights = self.get_module(index).weight.clone()
         filter_mask = self.filter_names[self.get_mask_name(index)].bool()

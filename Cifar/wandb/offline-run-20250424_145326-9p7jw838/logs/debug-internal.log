@@ -1,0 +1,9 @@
+{"time":"2025-04-24T14:53:26.138555077+01:00","level":"INFO","msg":"using version","core version":"0.18.2"}
+{"time":"2025-04-24T14:53:26.138573832+01:00","level":"INFO","msg":"created symlink","path":"/home/rpgsbs/r01al21/PycharmProjects/pythonProject/he_dst/Cifar/wandb/offline-run-20250424_145326-9p7jw838/logs/debug-core.log"}
+{"time":"2025-04-24T14:53:26.140766188+01:00","level":"INFO","msg":"created new stream","id":"9p7jw838"}
+{"time":"2025-04-24T14:53:26.140782316+01:00","level":"INFO","msg":"stream: started","id":"9p7jw838"}
+{"time":"2025-04-24T14:53:26.140791081+01:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"9p7jw838"}}
+{"time":"2025-04-24T14:53:26.1407963+01:00","level":"INFO","msg":"handler: started","stream_id":{"value":"9p7jw838"}}
+{"time":"2025-04-24T14:53:26.140811141+01:00","level":"INFO","msg":"sender: started","stream_id":{"value":"9p7jw838"}}
+{"time":"2025-04-24T14:53:26.14559158+01:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-04-24T14:53:26.189328373+01:00","level":"INFO","msg":"Starting system monitor"}

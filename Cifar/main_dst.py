@@ -20,7 +20,7 @@ from models import cifar_resnet, initializers, vgg
 from models.init_utils import weights_init
 
 import torch.nn as nn
-
+import wandb
 
 
 from sparselearning.core_dst import Masking, CosineDecay, LinearDecay
@@ -236,6 +236,9 @@ def main():
     parser.add_argument('--layer_interval', default=10, type=int,help='wider_interval')         # channel pruning every this many iterations
     parser.add_argument('--start_layer_rate', default=0.1, type=float,help='layer_ratio')
 
+    parser.add_argument('--wandb-mode', type=str, choices=("dryrun, online"), default="dryrun")
+    parser.add_argument('--wandb-project', type=str, default='he_dst')
+
 
 
 
@@ -245,6 +248,11 @@ def main():
     args = parser.parse_args()
     setup_logger(args)
     print_and_log(args)
+
+    if args.wandb_mode == "dryrun":
+        wandb.init(mode="dryrun")
+    elif args.wandb_mode == "online":
+        wandb.init(project=args.wandb_project, entity="tensorstrike", config=vars(args))
 
     if args.fp16:
         try:
@@ -435,6 +443,7 @@ def main():
                 best_filter_names=copy.deepcopy(mask.filter_names)
 
             print_and_log('Current learning rate: {0}. Time taken for epoch: {1:.2f} seconds.\n'.format(mask.optimizer.param_groups[0]['lr'], time.time() - t0))
+
 
         print ("best_acc",best_acc) 
 

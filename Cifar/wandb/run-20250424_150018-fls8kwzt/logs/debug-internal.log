@@ -1,0 +1,10 @@
+{"time":"2025-04-24T15:00:18.264657367+01:00","level":"INFO","msg":"using version","core version":"0.18.2"}
+{"time":"2025-04-24T15:00:18.264666923+01:00","level":"INFO","msg":"created symlink","path":"/home/rpgsbs/r01al21/PycharmProjects/pythonProject/he_dst/Cifar/wandb/run-20250424_150018-fls8kwzt/logs/debug-core.log"}
+{"time":"2025-04-24T15:00:18.266607148+01:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-04-24T15:00:18.269226376+01:00","level":"INFO","msg":"created new stream","id":"fls8kwzt"}
+{"time":"2025-04-24T15:00:18.269248235+01:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"fls8kwzt"}}
+{"time":"2025-04-24T15:00:18.269256858+01:00","level":"INFO","msg":"sender: started","stream_id":{"value":"fls8kwzt"}}
+{"time":"2025-04-24T15:00:18.269402915+01:00","level":"INFO","msg":"stream: started","id":"fls8kwzt"}
+{"time":"2025-04-24T15:00:18.26940335+01:00","level":"INFO","msg":"handler: started","stream_id":{"value":"fls8kwzt"}}
+{"time":"2025-04-24T15:00:18.572660181+01:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-04-24T15:00:18.574459298+01:00","level":"INFO","msg":"Starting system monitor"}

@@ -1,0 +1,18 @@
+{"time":"2025-04-24T17:00:50.203002313+01:00","level":"INFO","msg":"using version","core version":"0.18.2"}
+{"time":"2025-04-24T17:00:50.203017258+01:00","level":"INFO","msg":"created symlink","path":"/home/rpgsbs/r01al21/PycharmProjects/pythonProject/he_dst/Cifar/wandb/run-20250424_170050-bc0by5lm/logs/debug-core.log"}
+{"time":"2025-04-24T17:00:50.204379965+01:00","level":"ERROR","msg":"dialing: google: could not find default credentials. See https://cloud.google.com/docs/authentication/external/set-up-adc for more information"}
+{"time":"2025-04-24T17:00:50.218740531+01:00","level":"INFO","msg":"created new stream","id":"bc0by5lm"}
+{"time":"2025-04-24T17:00:50.218773666+01:00","level":"INFO","msg":"stream: started","id":"bc0by5lm"}
+{"time":"2025-04-24T17:00:50.218824372+01:00","level":"INFO","msg":"handler: started","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:00:50.21891489+01:00","level":"INFO","msg":"writer: Do: started","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:00:50.21915194+01:00","level":"INFO","msg":"sender: started","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:00:50.555363842+01:00","level":"INFO","msg":"wandb-core","!BADKEY":null}
+{"time":"2025-04-24T17:00:50.5560938+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-04-24T17:02:19.235366928+01:00","level":"INFO","msg":"stream: closing","id":"bc0by5lm"}
+{"time":"2025-04-24T17:02:19.235385465+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-04-24T17:02:19.236121616+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-04-24T17:02:19.873149575+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-04-24T17:02:20.111716918+01:00","level":"INFO","msg":"handler: closed","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:02:20.111759135+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:02:20.111790092+01:00","level":"INFO","msg":"sender: closed","stream_id":{"value":"bc0by5lm"}}
+{"time":"2025-04-24T17:02:20.111818543+01:00","level":"INFO","msg":"stream: closed","id":"bc0by5lm"}
