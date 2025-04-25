@@ -3,3 +3,5 @@ Cifar/data/*
 Cifar/logs/*
 Cifar/Chase_models/*
 data/*
+Cifar/wandb/*
+Imagenet/wandb/*
