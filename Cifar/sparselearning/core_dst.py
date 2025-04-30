@@ -984,12 +984,11 @@ class Masking(object):
     #
     #     print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
-    def del_layer(self):
-        # HE-vs-UMM adaptive pruning
+    def del_layer(self):  # HE-vs-UMM adaptive pruning
         self.track_hyperspherical_energy()
-
         filter_number = self.filter_num()
         total_to_prune = filter_number - self.baseline_filter_num * (1 - self.layer_rate)
+
         if total_to_prune <= 0:
             return
 
@@ -997,7 +996,8 @@ class Masking(object):
         thr = getattr(self.args, "he_switch_std", 5.0)  # switch threshold
 
         for active_prune_key in self.module.layer2split:
-            passive_prune_key, _ = self.module.next_layers[active_prune_key]
+            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
+
             mask_name = self.get_mask_name(active_prune_key)
             filter_mask = self.filter_names[mask_name]
             active_channels = filter_mask.sum().item()
@@ -1008,26 +1008,34 @@ class Masking(object):
                 total_to_prune - pruned_so_far,
                 active_channels - self.minimum_layer.get(active_prune_key, 1),
             )
+
             if layer_prune_amount <= 0:
                 continue
 
             he_scores = self.hyperspherical_channel_energy(active_prune_key)
-            active_idx = torch.where(filter_mask.bool())[0]
-            active_he = he_scores[filter_mask.bool()]
+            active_idx = torch.where(filter_mask.bool())[0].cpu()
+            active_he = he_scores[filter_mask.bool()].cpu()
             he_std = active_he.std()
 
-            if he_std < thr:  # fallback to UMM
-                weight = dict(self.module.named_modules())[active_prune_key].weight.data
-                umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()]
-                scores, descending = umm, False
-            else:  # use HE
-                scores, descending = active_he, True
+            print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < thr else 'HE'}")
 
+            if he_std < thr:  # fallback to UMM
+                # Instead of using named_modules with a tuple key, use get_module
+                weight = self.get_module(active_prune_key).weight.data
+                # Move to CPU immediately for consistency
+                umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+                scores, descending = umm, False  # Lower UMM = more prunable
+            else:  # use HE
+                scores, descending = active_he, True  # Higher HE = more prunable
+
+            # Both scores and active_idx are on CPU
             _, ord_idx = torch.sort(scores, descending=descending)
-            prune_idx = active_idx[ord_idx[:layer_prune_amount]].cpu().tolist()
+
+            prune_idx = active_idx[ord_idx[:layer_prune_amount]].tolist()
 
             self.filter_names[mask_name][prune_idx] = 0
             self.passive_names[self.get_mask_name(passive_prune_key)][prune_idx] = 0
+
             pruned_so_far += len(prune_idx)
 
         self.update_filter_mask()
