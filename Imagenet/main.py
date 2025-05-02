@@ -30,6 +30,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 
 import resnet as models
 from smoothing import LabelSmoothing
+import wandb
 
 
 print("CUDA_VISIBLE_DEVICES:", os.environ.get("CUDA_VISIBLE_DEVICES"))
@@ -148,7 +149,15 @@ def add_parser_arguments(parser):
     parser.add_argument('--layer_interval', default=16000, type=float, help='wider_interval')
     parser.add_argument('--start_layer_rate', default=0.1, type=float, help='layer_ratio')
 
+    parser.add_argument('--wandb-mode', type=str, choices=("dryrun, online"), default="dryrun")
+    parser.add_argument('--wandb-project', type=str, default='he_dst')
+
     core.add_sparse_args(parser)
+
+    if args.wandb_mode == "dryrun":
+        wandb.init(mode="dryrun")
+    elif args.wandb_mode == "online":
+        wandb.init(project=args.wandb_project, entity="tensorstrike", config=vars(args))
 
 
 def main():
