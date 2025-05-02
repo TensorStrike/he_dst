@@ -154,13 +154,13 @@ def add_parser_arguments(parser):
 
     core.add_sparse_args(parser)
 
+
+
+def main():
     if args.wandb_mode == "dryrun":
         wandb.init(mode="dryrun")
     elif args.wandb_mode == "online":
         wandb.init(project=args.wandb_project, entity="tensorstrike", config=vars(args))
-
-
-def main():
     print(" torch.cuda.device_count()", torch.cuda.device_count())
     if args.trainbench or args.inferbench:
         logger = BenchLogger
