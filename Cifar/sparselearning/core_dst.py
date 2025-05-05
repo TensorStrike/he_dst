@@ -990,17 +990,17 @@ class Masking(object):
     #
     #     print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
-    def combined_pruning_score(self, active_prune_key, beta=0.3):
+    def combined_pruning_score(self, active_prune_key, beta=0.1, prune_amount=None):
         """
-        Simple weighted combination of UMM and HE for channel pruning.
+        Simple weighted combination of UMM and HE for channel pruning with monitoring metrics.
 
         Args:
             active_prune_key: The layer key
-            beta: Weight for HE contribution (0-1). Higher value means HE has more influence.
-                  Default 0.3 gives primary weight to UMM while still considering HE.
+            beta: Weight for HE contribution (0-1)
+            prune_amount: Number of channels to prune (for monitoring purposes)
 
         Returns:
-            Combined pruning score (higher = more prunable)
+            Combined pruning score and monitoring metrics
         """
         # Get filter mask and active channels
         name_mask = self.get_mask_name(active_prune_key)
@@ -1045,7 +1045,59 @@ class Masking(object):
         combined_scores = torch.zeros_like(he_scores)
         combined_scores[filter_mask] = combined_active_scores
 
-        return combined_scores
+        # Calculate monitoring metrics if prune_amount is provided
+        monitoring_metrics = {}
+        if prune_amount is not None and prune_amount > 0:
+            # Get indices sorted by UMM only (baseline approach)
+            _, umm_sorted_indices = torch.sort(norm_umm, descending=True)
+            umm_to_prune = umm_sorted_indices[:prune_amount].tolist()
+
+            # Get indices sorted by combined score
+            _, combined_sorted_indices = torch.sort(combined_active_scores, descending=True)
+            combined_to_prune = combined_sorted_indices[:prune_amount].tolist()
+
+            # 1. Rank correlation (Spearman's rho)
+            try:
+                import scipy.stats
+                rho, _ = scipy.stats.spearmanr(norm_umm.cpu().numpy(), combined_active_scores.cpu().numpy())
+                monitoring_metrics['rank_correlation'] = rho
+            except:
+                # Fallback if scipy not available
+                monitoring_metrics['rank_correlation'] = None
+
+            # 2. Calculate overlap between the two pruning decisions
+            umm_set = set(umm_to_prune)
+            combined_set = set(combined_to_prune)
+            overlap = len(umm_set.intersection(combined_set))
+            overlap_percentage = 100.0 * overlap / prune_amount if prune_amount > 0 else 100.0
+
+            # 3. Calculate changed decisions
+            changed_channels = prune_amount - overlap
+            changed_percentage = 100.0 - overlap_percentage
+
+            # Record metrics
+            monitoring_metrics['overlap_count'] = overlap
+            monitoring_metrics['overlap_percentage'] = overlap_percentage
+            monitoring_metrics['changed_count'] = changed_channels
+            monitoring_metrics['changed_percentage'] = changed_percentage
+
+            # 4. Calculate average rank change for changed decisions
+            rank_changes = []
+            for idx in combined_to_prune:
+                if idx not in umm_set:
+                    # Find where this channel ranked in UMM-only sorting
+                    umm_rank = torch.where(umm_sorted_indices == idx)[0].item()
+                    rank_change = umm_rank - combined_to_prune.index(idx)
+                    rank_changes.append(rank_change)
+
+            if rank_changes:
+                monitoring_metrics['avg_rank_improvement'] = sum(rank_changes) / len(rank_changes)
+                monitoring_metrics['max_rank_improvement'] = max(rank_changes)
+            else:
+                monitoring_metrics['avg_rank_improvement'] = 0
+                monitoring_metrics['max_rank_improvement'] = 0
+
+        return combined_scores, monitoring_metrics
 
     def del_layer(self):
         print("===========del layer with HE-influenced pruning===============")
@@ -1064,7 +1116,15 @@ class Masking(object):
         pruned_so_far = 0
 
         # Beta: weight of HE in the pruning decision
-        beta = self.args.he_beta if hasattr(self.args, 'he_beta') else 0.3
+        beta = self.args.he_beta if hasattr(self.args, 'he_beta') else 0.1
+
+        # Global monitoring metrics
+        global_metrics = {
+            'total_changed_count': 0,
+            'total_pruned_count': 0,
+            'layers_with_changes': 0,
+            'total_layers_pruned': 0,
+        }
 
         for active_prune_key in self.module.layer2split:
             passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
@@ -1085,8 +1145,9 @@ class Masking(object):
             if layer_prune_amount <= 0:
                 continue
 
-            # Get combined scores
-            combined_scores = self.combined_pruning_score(active_prune_key, beta)
+            # Get combined scores and monitoring metrics
+            combined_scores, metrics = self.combined_pruning_score(
+                active_prune_key, beta, layer_prune_amount)
 
             # Get indices to prune (highest scores = most prunable)
             active_indices = torch.where(filter_mask.bool())[0].to(combined_scores.device)
@@ -1100,13 +1161,61 @@ class Masking(object):
             self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
 
             pruned_so_far += len(del_ind)
-            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}")
+
+            # Update global metrics
+            global_metrics['total_pruned_count'] += layer_prune_amount
+            global_metrics['total_layers_pruned'] += 1
+
+            if metrics.get('changed_count', 0) > 0:
+                global_metrics['total_changed_count'] += metrics.get('changed_count', 0)
+                global_metrics['layers_with_changes'] += 1
+
+            # Log layer-specific metrics to wandb
+            layer_name = ".".join([str(i) for i in active_prune_key])
+            metrics_dict = {
+                f"layer/{layer_name}/prune_count": layer_prune_amount,
+                f"layer/{layer_name}/active_channels": active_channels,
+            }
+
+            # Add monitoring metrics
+            for metric_name, value in metrics.items():
+                metrics_dict[f"layer/{layer_name}/{metric_name}"] = value
+
+            wandb.log(metrics_dict)
+
+            # Print summary
+            change_info = ""
+            if 'changed_percentage' in metrics:
+                change_info = f" (Changed: {metrics['changed_percentage']:.1f}% of decisions)"
+
+            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}{change_info}")
 
         # Apply masks
         self.update_filter_mask()
         self.apply_mask()
 
+        # Calculate and log global statistics
+        if global_metrics['total_pruned_count'] > 0:
+            global_change_percentage = 100.0 * global_metrics['total_changed_count'] / global_metrics[
+                'total_pruned_count']
+        else:
+            global_change_percentage = 0.0
+
+        wandb.log({
+            "global/pruned_channels": pruned_so_far,
+            "global/target_to_prune": total_to_prune,
+            "global/he_beta": beta,
+            "global/changed_decisions_count": global_metrics['total_changed_count'],
+            "global/changed_decisions_percentage": global_change_percentage,
+            "global/layers_with_changes": global_metrics['layers_with_changes'],
+            "global/total_layers_pruned": global_metrics['total_layers_pruned'],
+        })
+
         print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
+        print(
+            f"HE influenced {global_metrics['total_changed_count']} pruning decisions ({global_change_percentage:.1f}%)")
+        print(
+            f"HE made changes in {global_metrics['layers_with_changes']}/{global_metrics['total_layers_pruned']} layers")
 
 
     '''
