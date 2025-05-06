@@ -645,7 +645,7 @@ class Masking(object):
         all_layer_means = []
 
         # For each prunable layer
-        for index in self.module.layer2split:
+        for index in self.module.module.layer2split:
             layer_name = ".".join([str(i) for i in index])
             # Get HE for each channel in this layer
             channel_he = self.hyperspherical_channel_energy(index, model=self.args.he_model, power=self.args.he_power)
@@ -713,7 +713,7 @@ class Masking(object):
 
         threshold = self.args.he_threshold
 
-        for active_prune_key in self.module.layer2split:
+        for active_prune_key in self.module.module.layer2split:
             passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
             name_mask = self.get_mask_name(active_prune_key)
