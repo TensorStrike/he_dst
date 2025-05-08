@@ -99,6 +99,11 @@ def add_sparse_args(parser):
 
     parser.add_argument('--dst', action='store_true', help='mest')
 
+    parser.add_argument('--he_threshold', type=float, default=2)
+    parser.add_argument('--he_selective', action='store_true')
+    parser.add_argument('--he_model', type=str, default='half_mhe')
+    parser.add_argument('--he_power', type=int, default=-2)
+
 
 class CosineDecay(object):
     """Decays a pruning rate according to a cosine schedule
