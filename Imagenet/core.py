@@ -701,7 +701,7 @@ class Masking(object):
 
         threshold = self.args.he_threshold
 
-        for active_prune_key in self.module.layer2split:
+        for active_prune_key in self.module.module.layer2split:
             passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
             name_mask = self.get_mask_name(active_prune_key)
