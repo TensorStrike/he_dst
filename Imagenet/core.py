@@ -307,17 +307,8 @@ class Masking(object):
 
 
 
-    def get_module(self, key):
-        m = self.base_module
-        for k in key:
-            # DDP/DataParallel inserted a leading "module" – skip it
-            if k == "module":
-                continue
-            if isinstance(k, int):
-                m = m[k]
-            else:
-                m = getattr(m, k)
-        return m
+    def get_module(self,key):
+        return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]],key[3])
 
     def update_filter_mask(self):
         print("update_filter_mask")
