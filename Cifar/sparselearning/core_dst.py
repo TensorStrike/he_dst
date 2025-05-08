@@ -557,6 +557,22 @@ class Masking(object):
 
         return acceptable_score
 
+    def gradual_pruning_rate(self,
+            step: int,
+            initial_threshold: float,
+            final_threshold: float,
+            initial_time: int,
+            final_time: int,
+    ):
+        if step <= initial_time:
+            threshold = initial_threshold
+        elif step > final_time:
+            threshold = final_threshold
+        else:
+            mul_coeff = 1 - (step - initial_time) / (final_time - initial_time)
+            threshold = final_threshold + (initial_threshold - final_threshold) * (mul_coeff ** 3)
+
+        return threshold
 
     def hyperspherical_channel_energy(self, index, model='half_mhe', power=-2):
         """Compute the hyperspherical energy of channels."""
@@ -640,22 +656,7 @@ class Masking(object):
 
         return full_energies
 
-    def gradual_pruning_rate(self,
-            step: int,
-            initial_threshold: float,
-            final_threshold: float,
-            initial_time: int,
-            final_time: int,
-    ):
-        if step <= initial_time:
-            threshold = initial_threshold
-        elif step > final_time:
-            threshold = final_threshold
-        else:
-            mul_coeff = 1 - (step - initial_time) / (final_time - initial_time)
-            threshold = final_threshold + (initial_threshold - final_threshold) * (mul_coeff ** 3)
 
-        return threshold
 
     def track_hyperspherical_energy(self):
         he_values = {}

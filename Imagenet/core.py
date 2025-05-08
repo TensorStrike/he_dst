@@ -13,6 +13,7 @@ import os
 import shutil
 import time
 from funcs import redistribution_funcs, growth_funcs, prune_funcs
+import wandb
 
 
 # get optimizer {{{
@@ -534,165 +535,231 @@ class Masking(object):
 
         return threshold
 
-    def del_layer(self):
-        #################################prune layer#############################
+    def hyperspherical_channel_energy(self, index, model='half_mhe', power=-2):
+        """Compute the hyperspherical energy of channels."""
+        weights = self.get_module(index).weight.clone()
+        filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+        weights = weights[filter_mask]
 
-        print("before del layer")
-        self.get_cfg()
+        if weights.size(0) <= 1:
+            return torch.zeros(filter_mask.size(0), device=weights.device)
 
-        print("current all fitler num", self.filter_num())
+        W_flat = weights.view(weights.size(0), -1)
 
-        ### prune ratio
-        rate = self.layer_rate
-        rate = 1 - rate
-        print("to keep rate", rate)
+        if model == 'half_mhe':
+            W_neg = -W_flat
+            W_combined = torch.cat([W_flat, W_neg], dim=0)
+        else:
+            W_combined = W_flat
 
-        filter_numer = self.filter_num()
-        print(filter_numer, self.baseline_filter_num * rate)
-        total_to_prune = filter_numer - self.baseline_filter_num * rate
-        print("total_to_prune", total_to_prune)
+        n_original = W_flat.size(0)
 
-        if total_to_prune >= 0:
+        # Normalize vectors
+        norms = torch.sqrt(torch.sum(W_combined * W_combined, dim=1, keepdim=True) + 1e-4)
+        W_normalized = W_combined / norms
 
-            ### mask the position
+        # Compute pairwise dot products
+        similarity_matrix = torch.matmul(W_normalized, W_normalized.t())
 
-            layer_prune = {}
-            residual_layer = {}
+        # Clamp similarity to avoid numerical issues
+        epsilon = 1e-4
+        similarity_matrix = torch.clamp(similarity_matrix, -1 + epsilon, 1 - epsilon)
 
-            residual = 9999
-            i = 0
-            while residual > 0 and i < 1000:
+        # Compute energy matrix based on power
+        if power > 0:  # Euclidean distance-based energy
+            # ||u-v||² = 2 - 2(u·v) for unit vectors
+            distance_squared = 2.0 - 2.0 * similarity_matrix
 
-                residual = 0
+            eye = torch.eye(distance_squared.size(0), device=distance_squared.device)
+            distance_squared = distance_squared + eye * epsilon
 
-                # to prune layer
-                prune_layer_index = []
-                for l_index in self.module.module.layer2split:
-                    if l_index not in residual_layer.keys():
-                        prune_layer_index.append(l_index)
+            if power == 1:
+                energy_matrix = 1.0 / torch.sqrt(distance_squared)
+            else:  # power == 2 or other
+                energy_matrix = 1.0 / distance_squared  # For power=2, it's inverse squared
 
-                        # to prune num
-                total_to_prune = filter_numer - self.baseline_filter_num * rate
-                pruned = []
-                for n_index in layer_prune:
-                    pruned.extend(layer_prune[n_index])
-                total_to_prune = total_to_prune - len(pruned)
+        elif power == 0:  # Logarithmic energy
+            distance_squared = 2.0 - 2.0 * similarity_matrix
+            distance_squared = distance_squared + torch.eye(distance_squared.size(0),
+                                                            device=distance_squared.device) * epsilon
+            energy_matrix = -torch.log(distance_squared)
 
-                print("total_to_prune", total_to_prune)
+        else:  # Angular distance-based energy
+            # arccos(u·v)/π gives normalized angular distance
+            angular_distances = torch.acos(similarity_matrix) / math.pi
+            angular_distances = angular_distances + epsilon  # avoid division by zero
 
-                acceptable_score = self.prune_score(prune_layer_index, total_to_prune)
+            # For power = -1, use inverse; for power = -2, use inverse squared
+            energy_matrix = torch.pow(angular_distances, power)
 
-                for index in self.module.module.layer2split:
+        # Zero out diagonal elements (self-interactions)
+        eye = torch.eye(energy_matrix.size(0), device=energy_matrix.device)
+        energy_matrix = energy_matrix * (1.0 - eye)
 
-                    if index not in residual_layer.keys():
+        # Only consider upper triangular part to avoid counting pairs twice
+        energy_matrix = torch.triu(energy_matrix, diagonal=1)
 
-                        grad = torch.abs(self.get_module(index).weight.clone())
-                        mask = self.masks[self.get_mask_name(index)]
+        # Calculate total energy for each channel
+        if model == 'half_mhe':
+            # For half-space, we need to handle original and virtual channels
+            row_sum = energy_matrix.sum(dim=1)
+            col_sum = energy_matrix.sum(dim=0)
 
-                        del_ind = []
-                        filter_index = 0
-                        layer_grad_magnitude = []
-                        for filter_grad, filter_mask, filter_name in zip(grad, mask,
-                                                                         self.filter_names[self.get_mask_name(index)]):
+            # Sum contributions for original channels only
+            channel_energies = row_sum[:n_original] + col_sum[:n_original]
+        else:
+            # For full-space, just sum rows and columns
+            channel_energies = energy_matrix.sum(dim=1) + energy_matrix.sum(dim=0)
 
-                            if filter_name == 1.0:
+        # Map back to original size including pruned channels
+        full_energies = torch.zeros(filter_mask.size(0), device=weights.device)
+        full_energies[filter_mask] = channel_energies
 
-                                if self.args.mask_wise:
-                                    grad_magnitude = torch.abs(filter_grad)[filter_mask.bool()].mean().item()
-
-                                elif self.args.mag_wise:
-                                    grad_magnitude = torch.abs(filter_grad).mean().item()
+        return full_energies
 
 
-                                elif self.args.kernal_wise:
-                                    vector = filter_grad.view(filter_grad.size(0), -1).sum(dim=1)
-                                    # print("vector",vector.shape)
-                                    grad_magnitude = ((vector != 0).sum().int().item() / vector.numel())
 
-                                elif self.args.connection_wise:
-                                    vector = filter_grad
-                                    grad_magnitude = ((vector != 0).sum().int().item() / vector.numel())
+    def track_hyperspherical_energy(self):
+        he_values = {}
+        layer_channel_counts = {}
+        layer_stds = {}
+        total_he = 0
+        active_channel_count = 0
+        all_layer_means = []
 
-                                if grad_magnitude < acceptable_score:
-                                    del_ind.append(filter_index)
+        # For each prunable layer
+        for index in self.module.layer2split:
+            layer_name = ".".join([str(i) for i in index])
+            # Get HE for each channel in this layer
+            channel_he = self.hyperspherical_channel_energy(index, model=self.args.he_model, power=self.args.he_power)
 
-                                    layer_grad_magnitude.append(grad_magnitude)
+            # Filter out pruned channels
+            filter_mask = self.filter_names[self.get_mask_name(index)].bool()
+            active_channels = filter_mask.sum().item()
 
-                            filter_index += 1
+            if active_channels > 0:  # Avoid empty layers
+                # Get HE only for active channels
+                active_he = channel_he[filter_mask]
 
-                        # current layer
-                        # if index not in layer_prune.keys():
-                        current = self.filter_names[self.get_mask_name(index)].sum().item()
-                        # else:
-                        #     current=self.filter_names[self.get_mask_name(index)].sum().item()-len(layer_prune[index])
+                # Calculate mean and standard deviation within this layer
+                avg_he = active_he.mean().item()
+                std_he = active_he.std().item()  # Standard deviation within layer
 
-                        single_residual = self.minimum_layer[index] - (current - len(del_ind))
-                        print("index", index, "prune", len(del_ind), 'current', current, "single_residual",
-                              single_residual)
+                # Store metrics
+                he_values[layer_name] = avg_he
+                layer_channel_counts[layer_name] = active_channels
+                layer_stds[layer_name] = std_he
 
-                        if index not in layer_prune.keys(): layer_prune[index] = []
+                all_layer_means.append(avg_he)
+                total_he += active_he.sum().item()
+                active_channel_count += active_channels
 
-                        # if single_residual>0:
-                        #     residual+=single_residual
-                        #     prune_lengh=int(current-self.minimum_layer[index] )
-                        #     layer_prune[index].extend (np.array(del_ind) [  np.array(layer_grad_magnitude) <   np.sort(np.array(layer_grad_magnitude))[prune_lengh]  ])
-                        #     residual_layer[index]=single_residual
+        # Prepare metrics dictionary - global metrics
+        metrics = {
+            "global/total_he": total_he,
+            "global/mean_he": np.mean(all_layer_means) if all_layer_means else 0,
+            "global/min_he": min(he_values.values()) if he_values else 0,
+            "global/max_he": max(he_values.values()) if he_values else 0,
+            "global/active_channels": active_channel_count,
+            "global/step": self.steps
+        }
 
-                        if single_residual > 0:
-                            residual += single_residual
-                            prune_lengh = int(current - self.minimum_layer[index])
+        # Add per-layer metrics
+        for layer_name, avg_he in he_values.items():
+            channels = layer_channel_counts[layer_name]
+            norm_factor = channels / 64.0  # Normalize relative to a 64-channel layer
 
-                            layer_grad_magnitude = np.array(layer_grad_magnitude)
-                            # layer_prune[index].extend (np.array(del_ind) [  np.array(layer_grad_magnitude) <   np.sort(np.array(layer_grad_magnitude))[prune_lengh]  ])
-                            layer_prune[index].extend(np.array(del_ind)[np.argsort(layer_grad_magnitude)[:prune_lengh]])
-                            residual_layer[index] = single_residual
+            metrics[f"layer/{layer_name}/channel_count"] = channels
+            metrics[f"layer/{layer_name}/mean_he"] = avg_he
+            metrics[f"layer/{layer_name}/normalized_he"] = avg_he / norm_factor
+            metrics[f"layer/{layer_name}/std"] = layer_stds[layer_name]
 
-                        else:
+        wandb.log(metrics)
 
-                            layer_prune[index].extend(del_ind)
+    def del_layer(self, selective=False):
+        print("===========del layer with layer-wise HE===============")
+        self.track_hyperspherical_energy()
 
-                        print("layer_prune[index]", index, "len", len(layer_prune[index]))
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+        filter_number = self.filter_num()   # current num of filters in the network
+        print(filter_number, '/', self.baseline_filter_num, 'channels')
 
-                ###### layer prune
+        rate = 1 - self.layer_rate      # target density
+        total_to_prune = filter_number - self.baseline_filter_num * rate
+        print(f"Total channels to prune: {total_to_prune}")
+        if total_to_prune <= 0:
+            print("No channels to prune")
+            return
 
-                print("begin to prune")
-                for active_prune_key in self.module.module.layer2split:
-                    passive_prune_key, norm_key = self.module.module.next_layers[active_prune_key]
+        pruned_so_far = 0
 
-                    if len(self.get_mask_name(active_prune_key)) > 0:
-                        self.del_func(layer_prune[active_prune_key],
-                                      active_prune_key,
-                                      passive_prune_key)
+        threshold = self.args.he_threshold
 
-                print("pruneing layer", self.get_cfg())
-                print("current all fitler num", self.filter_num())
-                print("pruned", filter_numer - self.filter_num())
+        for active_prune_key in self.module.layer2split:
+            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
-                # to prune num
+            name_mask = self.get_mask_name(active_prune_key)
+            filter_mask = self.filter_names[name_mask]               # active filter mask
+            active_channels = filter_mask.sum().item()
 
-                pruned = []
-                for n_index in layer_prune:
-                    print(n_index, len(layer_prune[n_index]))
-                    pruned.extend(layer_prune[n_index])
+            layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
 
-                print("======residual", residual, "pruned", len(pruned))
+            # Ensure we don't over-prune
+            remaining_to_prune = total_to_prune - pruned_so_far
+            layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
 
-                if i == 1000:
-                    print('Error resolving the residual! Layers are too full! Residual left over: {0}'.format(residual))
+            min_size = self.minimum_layer.get(active_prune_key, 1)
+            max_prune = active_channels - min_size
+            layer_prune_amount = min(layer_prune_amount, max_prune)
 
-            ###### layer prune
+            if layer_prune_amount <= 0:
+                continue
 
-            for active_prune_key in self.module.module.layer2split:
-                passive_prune_key, norm_key = self.module.module.next_layers[active_prune_key]
+            he_scores = self.hyperspherical_channel_energy(active_prune_key, model=self.args.he_model, power=self.args.he_power)
 
-                if len(self.get_mask_name(active_prune_key)) > 0:
-                    self.del_func(layer_prune[active_prune_key],
-                                  active_prune_key,
-                                  passive_prune_key)
+            # Get indices to prune (highest HE = most redundant)
+            active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)
+            active_he_scores = he_scores[filter_mask.bool()]
 
-            print("pruneing layer", self.get_cfg())
-            print("current all fitler num", self.filter_num())
-            print("pruned", filter_numer - self.filter_num())
+            if selective:
+                he_std = active_he_scores.std()
+                print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
+
+                if he_std < threshold:  # fall back to UMM
+                    weight = self.get_module(active_prune_key).weight.data
+                    umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+
+                    _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
+                else:  # use HE
+                    _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
+
+                del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
+            else:
+                _, sorted_indices = torch.sort(active_he_scores, descending=True)
+                del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
+
+            # Set pruning masks
+            self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
+            self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
+
+            pruned_so_far += len(del_ind)
+            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}")
+
+        # Apply masks
+        self.update_filter_mask()
+        print("After update_filter_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+
+        self.apply_mask()
+        self.track_hyperspherical_energy()
+
+        print("After apply_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+
+        print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
     '''
 
