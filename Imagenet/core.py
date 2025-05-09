@@ -99,7 +99,7 @@ def add_sparse_args(parser):
 
     parser.add_argument('--dst', action='store_true', help='mest')
 
-    parser.add_argument('--he_threshold', type=float, default=2)
+    parser.add_argument('--he_threshold', type=float, default=5.0)
     parser.add_argument('--he_selective', action='store_true')
     parser.add_argument('--he_model', type=str, default='half_mhe')
     parser.add_argument('--he_power', type=int, default=-2)
@@ -302,8 +302,22 @@ class Masking(object):
                         print("check in", name, "density is", channel_zero / channel_all, "weight magnitue",
                               torch.abs(channel_vector).mean().item())
 
+    # def get_module(self, key):
+    #     return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
+
+
+
     def get_module(self, key):
-        return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
+        m = self.base_module
+        for k in key:
+            # DDP/DataParallel inserted a leading "module" – skip it
+            if k == "module":
+                continue
+            if isinstance(k, int):
+                m = m[k]
+            else:
+                m = getattr(m, k)
+        return m
 
     def update_filter_mask(self):
         print("update_filter_mask")
@@ -349,14 +363,14 @@ class Masking(object):
         filter_names = {}
         passive_names = {}
 
-        for ind in self.module.module.layer2split:
+        for ind in self.base_module.layer2split:
             dim = self.get_module(ind).weight.shape[0]
 
             mask = torch.ones(dim)
             # mask[int(dim/2):]=0
             filter_names[self.get_mask_name(ind)] = mask
 
-            passive_ind = self.module.module.next_layers[ind][0]
+            passive_ind = self.base_module.next_layers[ind][0]
             passive_names[self.get_mask_name(passive_ind)] = mask
 
         self.filter_names = filter_names
@@ -622,8 +636,6 @@ class Masking(object):
 
         return full_energies
 
-
-
     def track_hyperspherical_energy(self):
         he_values = {}
         layer_channel_counts = {}
@@ -633,7 +645,7 @@ class Masking(object):
         all_layer_means = []
 
         # For each prunable layer
-        for index in self.module.module.layer2split:
+        for index in self.module.layer2split:
             layer_name = ".".join([str(i) for i in index])
             # Get HE for each channel in this layer
             channel_he = self.hyperspherical_channel_energy(index, model=self.args.he_model, power=self.args.he_power)
@@ -701,8 +713,8 @@ class Masking(object):
 
         threshold = self.args.he_threshold
 
-        for active_prune_key in self.module.module.layer2split:
-            passive_prune_key, norm_key = self.module.module.next_layers[active_prune_key]
+        for active_prune_key in self.module.layer2split:
+            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
             name_mask = self.get_mask_name(active_prune_key)
             filter_mask = self.filter_names[name_mask]               # active filter mask
@@ -791,17 +803,17 @@ class Masking(object):
         #         self.baseline_nonzero += weight.numel()*density
 
         ## init for layer
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.baseline_filter_num += self.get_module(index).weight.shape[0]
 
         print("baseline fitler num", self.baseline_filter_num)
 
         self.bound_layer = {}
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.bound_layer[index] = int(self.get_module(index).out_channels)
 
         self.minimum_layer = {}
-        for index in self.module.module.layer2split:
+        for index in self.base_module.layer2split:
             self.minimum_layer[index] = int(
                 self.get_module(index).out_channels * (1 - self.args.start_layer_rate) * self.args.minumum_ratio)
 
@@ -942,30 +954,6 @@ class Masking(object):
         self.print_nonzero_counts()
 
     def init_growth_prune_and_redist(self):
-        # if isinstance(self.growth_func, str) and self.growth_func in growth_funcs:
-        #     if 'global' in self.growth_func: self.global_growth = True
-        #     self.growth_func = growth_funcs[self.growth_func]
-        # elif isinstance(self.growth_func, str):
-        #     print('='*50, 'ERROR', '='*50)
-        #     print('Growth mode function not known: {0}.'.format(self.growth_func))
-        #     print('Use either a custom growth function or one of the pre-defined functions:')
-        #     for key in growth_funcs:
-        #         print('\t{0}'.format(key))
-        #     print('='*50, 'ERROR', '='*50)
-        #     raise Exception('Unknown growth mode.')
-
-        # if isinstance(self.prune_func, str) and self.prune_func in prune_funcs:
-        #     if 'global' in self.prune_func: self.global_prune = True
-        #     self.prune_func = prune_funcs[self.prune_func]
-        # elif isinstance(self.prune_func, str):
-        #     print('='*50, 'ERROR', '='*50)
-        #     print('Prune mode function not known: {0}.'.format(self.prune_func))
-        #     print('Use either a custom prune function or one of the pre-defined functions:')
-        #     for key in prune_funcs:
-        #         print('\t{0}'.format(key))
-        #     print('='*50, 'ERROR', '='*50)
-        #     raise Exception('Unknown prune mode.')
-
         if isinstance(self.redistribution_func, str) and self.redistribution_func in redistribution_funcs:
             self.redistribution_func = redistribution_funcs[self.redistribution_func]
         elif isinstance(self.redistribution_func, str):
@@ -1006,7 +994,7 @@ class Masking(object):
                     print("current layer rate", self.layer_rate)
                     print('===========del layer===============')
 
-                    self.del_layer()
+                    self.del_layer(selective=self.args.he_selective)
 
                     print('===========done ===============')
                     if "global" not in self.args.growth:
@@ -1151,6 +1139,8 @@ class Masking(object):
     def add_module(self, module):
 
         self.module = module
+        self.base_module = module.module if hasattr(module, 'module') else module   # compatibility for 1gpu and multigpu
+
         self.modules.append(self.module)
         for name, tensor in self.module.named_parameters():
             self.names.append(name)
@@ -2083,4 +2073,3 @@ class Masking(object):
         total_fired_weights = ntotal_fired_weights / ntotal_weights
         print('The percentage of the total fired weights is:', total_fired_weights)
         return layer_fired_weights, total_fired_weights
-
