@@ -740,16 +740,28 @@ class Masking(object):
             active_he_scores = he_scores[filter_mask.bool()]
 
             if selective:
-                he_std = active_he_scores.std()
-                print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
 
-                if he_std < threshold:  # fall back to UMM
+                # norm_he = active_he_scores / (active_channels * (active_channels - 1))
+                # cv = norm_he.std() / (norm_he.mean() + 1e-8)
+
+                cv = active_he_scores.std() / (active_he_scores.mean() + 1e-8)
+                if cv >= 0.01:
+                    _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
+                else:
                     weight = self.get_module(active_prune_key).weight.data
                     umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
-
                     _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
-                else:  # use HE
-                    _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
+
+                # he_std = active_he_scores.std()
+                # print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
+                #
+                # if he_std < threshold:  # fall back to UMM
+                #     weight = self.get_module(active_prune_key).weight.data
+                #     umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+                #
+                #     _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
+                # else:  # use HE
+                #     _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
 
                 del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
             else:
