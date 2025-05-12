@@ -746,8 +746,10 @@ class Masking(object):
 
                 cv = active_he_scores.std() / (active_he_scores.mean() + 1e-8)
                 if cv >= 0.01:
+                    print(f"layer {active_prune_key}: HE std = {active_he_scores.std():.4f}, cv = {cv}, using HE")
                     _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
                 else:
+                    print(f"layer {active_prune_key}: HE std = {active_he_scores.std():.4f}, cv = {cv}, using UMM")
                     weight = self.get_module(active_prune_key).weight.data
                     umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
                     _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
