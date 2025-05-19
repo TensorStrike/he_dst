@@ -906,90 +906,90 @@ class Masking(object):
     #         print("pruned", filter_numer - self.filter_num())
 
 
-    # def del_layer(self, selective=False):
-    #     print("===========del layer with layer-wise HE===============")
-    #     self.track_hyperspherical_energy()
-    #
-    #     print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
-    #     print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
-    #     filter_number = self.filter_num()   # current num of filters in the network
-    #     print(filter_number, '/', self.baseline_filter_num, 'channels')
-    #
-    #     rate = 1 - self.layer_rate      # target density
-    #     total_to_prune = filter_number - self.baseline_filter_num * rate
-    #     print(f"Total channels to prune: {total_to_prune}")
-    #     if total_to_prune <= 0:
-    #         print("No channels to prune")
-    #         return
-    #
-    #     pruned_so_far = 0
-    #
-    #     threshold = self.args.he_threshold
-    #
-    #     for active_prune_key in self.module.layer2split:
-    #         passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
-    #
-    #         name_mask = self.get_mask_name(active_prune_key)
-    #         filter_mask = self.filter_names[name_mask]               # active filter mask
-    #         active_channels = filter_mask.sum().item()
-    #
-    #         layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
-    #
-    #         # Ensure we don't over-prune
-    #         remaining_to_prune = total_to_prune - pruned_so_far
-    #         layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
-    #
-    #         min_size = self.minimum_layer.get(active_prune_key, 1)
-    #         max_prune = active_channels - min_size
-    #         layer_prune_amount = min(layer_prune_amount, max_prune)
-    #
-    #         if layer_prune_amount <= 0:
-    #             continue
-    #
-    #         he_scores = self.hyperspherical_channel_energy(active_prune_key, model=self.args.he_model, power=self.args.he_power)
-    #
-    #         # Get indices to prune (highest HE = most redundant)
-    #         active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)
-    #         active_he_scores = he_scores[filter_mask.bool()]
-    #
-    #         if selective:
-    #             he_std = active_he_scores.std()
-    #             print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
-    #
-    #             if he_std < threshold:  # fall back to UMM
-    #                 weight = self.get_module(active_prune_key).weight.data
-    #                 umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
-    #
-    #                 _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
-    #             else:  # use HE
-    #                 _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
-    #
-    #             del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
-    #         else:
-    #             _, sorted_indices = torch.sort(active_he_scores, descending=True)
-    #             del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
-    #
-    #         # Set pruning masks
-    #         self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
-    #         self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
-    #
-    #         pruned_so_far += len(del_ind)
-    #         print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}")
-    #
-    #     # Apply masks
-    #     self.update_filter_mask()
-    #     print("After update_filter_mask:")
-    #     print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
-    #     print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
-    #
-    #     self.apply_mask()
-    #     self.track_hyperspherical_energy()
-    #
-    #     print("After apply_mask:")
-    #     print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
-    #     print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
-    #
-    #     print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
+    def del_layer(self, selective=False):
+        print("===========del layer with layer-wise HE===============")
+        self.track_hyperspherical_energy()
+
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+        filter_number = self.filter_num()   # current num of filters in the network
+        print(filter_number, '/', self.baseline_filter_num, 'channels')
+
+        rate = 1 - self.layer_rate      # target density
+        total_to_prune = filter_number - self.baseline_filter_num * rate
+        print(f"Total channels to prune: {total_to_prune}")
+        if total_to_prune <= 0:
+            print("No channels to prune")
+            return
+
+        pruned_so_far = 0
+
+        threshold = self.args.he_threshold
+
+        for active_prune_key in self.module.layer2split:
+            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
+
+            name_mask = self.get_mask_name(active_prune_key)
+            filter_mask = self.filter_names[name_mask]               # active filter mask
+            active_channels = filter_mask.sum().item()
+
+            layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
+
+            # Ensure we don't over-prune
+            remaining_to_prune = total_to_prune - pruned_so_far
+            layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
+
+            min_size = self.minimum_layer.get(active_prune_key, 1)
+            max_prune = active_channels - min_size
+            layer_prune_amount = min(layer_prune_amount, max_prune)
+
+            if layer_prune_amount <= 0:
+                continue
+
+            he_scores = self.hyperspherical_channel_energy(active_prune_key, model=self.args.he_model, power=self.args.he_power)
+
+            # Get indices to prune (highest HE = most redundant)
+            active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)
+            active_he_scores = he_scores[filter_mask.bool()]
+
+            if selective:
+                he_std = active_he_scores.std()
+                print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
+
+                if he_std < threshold:  # fall back to UMM
+                    weight = self.get_module(active_prune_key).weight.data
+                    umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+
+                    _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
+                else:  # use HE
+                    _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
+
+                del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
+            else:
+                _, sorted_indices = torch.sort(active_he_scores, descending=True)
+                del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
+
+            # Set pruning masks
+            self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
+            self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
+
+            pruned_so_far += len(del_ind)
+            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}")
+
+        # Apply masks
+        self.update_filter_mask()
+        print("After update_filter_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+
+        self.apply_mask()
+        self.track_hyperspherical_energy()
+
+        print("After apply_mask:")
+        print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
+        print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
+
+        print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
 
     def combined_pruning_score(self, active_prune_key, beta=0.1, prune_amount=None):
         """
@@ -1100,123 +1100,123 @@ class Masking(object):
 
         return combined_scores, monitoring_metrics
 
-    def del_layer(self):
-        print("===========del layer with HE-influenced pruning===============")
-
-        filter_number = self.filter_num()
-        print(filter_number, '/', self.baseline_filter_num, 'channels')
-
-        rate = 1 - self.layer_rate  # target density
-        total_to_prune = filter_number - self.baseline_filter_num * rate
-        print(f"Total channels to prune: {total_to_prune}")
-
-        if total_to_prune <= 0:
-            print("No channels to prune")
-            return
-
-        pruned_so_far = 0
-
-        # Beta: weight of HE in the pruning decision
-        beta = self.args.he_beta if hasattr(self.args, 'he_beta') else 0.1
-
-        # Global monitoring metrics
-        global_metrics = {
-            'total_changed_count': 0,
-            'total_pruned_count': 0,
-            'layers_with_changes': 0,
-            'total_layers_pruned': 0,
-        }
-
-        for active_prune_key in self.module.layer2split:
-            passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
-
-            name_mask = self.get_mask_name(active_prune_key)
-            filter_mask = self.filter_names[name_mask]
-            active_channels = filter_mask.sum().item()
-
-            layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
-
-            # Adjust for remaining pruning budget and minimum layer size
-            remaining_to_prune = total_to_prune - pruned_so_far
-            layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
-            min_size = self.minimum_layer.get(active_prune_key, 1)
-            max_prune = active_channels - min_size
-            layer_prune_amount = min(layer_prune_amount, max_prune)
-
-            if layer_prune_amount <= 0:
-                continue
-
-            # Get combined scores and monitoring metrics
-            combined_scores, metrics = self.combined_pruning_score(
-                active_prune_key, beta, layer_prune_amount)
-
-            # Get indices to prune (highest scores = most prunable)
-            active_indices = torch.where(filter_mask.bool())[0].to(combined_scores.device)
-            active_combined_scores = combined_scores[filter_mask.bool()]
-
-            _, sorted_indices = torch.sort(active_combined_scores, descending=True)
-            del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
-
-            # Set pruning masks
-            self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
-            self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
-
-            pruned_so_far += len(del_ind)
-
-            # Update global metrics
-            global_metrics['total_pruned_count'] += layer_prune_amount
-            global_metrics['total_layers_pruned'] += 1
-
-            if metrics.get('changed_count', 0) > 0:
-                global_metrics['total_changed_count'] += metrics.get('changed_count', 0)
-                global_metrics['layers_with_changes'] += 1
-
-            # Log layer-specific metrics to wandb
-            layer_name = ".".join([str(i) for i in active_prune_key])
-            metrics_dict = {
-                f"layer/{layer_name}/prune_count": layer_prune_amount,
-                f"layer/{layer_name}/active_channels": active_channels,
-            }
-
-            # Add monitoring metrics
-            for metric_name, value in metrics.items():
-                metrics_dict[f"layer/{layer_name}/{metric_name}"] = value
-
-            wandb.log(metrics_dict)
-
-            # Print summary
-            change_info = ""
-            if 'changed_percentage' in metrics:
-                change_info = f" (Changed: {metrics['changed_percentage']:.1f}% of decisions)"
-
-            print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}{change_info}")
-
-        # Apply masks
-        self.update_filter_mask()
-        self.apply_mask()
-
-        # Calculate and log global statistics
-        if global_metrics['total_pruned_count'] > 0:
-            global_change_percentage = 100.0 * global_metrics['total_changed_count'] / global_metrics[
-                'total_pruned_count']
-        else:
-            global_change_percentage = 0.0
-
-        wandb.log({
-            "global/pruned_channels": pruned_so_far,
-            "global/target_to_prune": total_to_prune,
-            "global/he_beta": beta,
-            "global/changed_decisions_count": global_metrics['total_changed_count'],
-            "global/changed_decisions_percentage": global_change_percentage,
-            "global/layers_with_changes": global_metrics['layers_with_changes'],
-            "global/total_layers_pruned": global_metrics['total_layers_pruned'],
-        })
-
-        print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
-        print(
-            f"HE influenced {global_metrics['total_changed_count']} pruning decisions ({global_change_percentage:.1f}%)")
-        print(
-            f"HE made changes in {global_metrics['layers_with_changes']}/{global_metrics['total_layers_pruned']} layers")
+    # def del_layer(self):
+    #     print("===========del layer with HE-influenced pruning===============")
+    #
+    #     filter_number = self.filter_num()
+    #     print(filter_number, '/', self.baseline_filter_num, 'channels')
+    #
+    #     rate = 1 - self.layer_rate  # target density
+    #     total_to_prune = filter_number - self.baseline_filter_num * rate
+    #     print(f"Total channels to prune: {total_to_prune}")
+    #
+    #     if total_to_prune <= 0:
+    #         print("No channels to prune")
+    #         return
+    #
+    #     pruned_so_far = 0
+    #
+    #     # Beta: weight of HE in the pruning decision
+    #     beta = self.args.he_beta if hasattr(self.args, 'he_beta') else 0.1
+    #
+    #     # Global monitoring metrics
+    #     global_metrics = {
+    #         'total_changed_count': 0,
+    #         'total_pruned_count': 0,
+    #         'layers_with_changes': 0,
+    #         'total_layers_pruned': 0,
+    #     }
+    #
+    #     for active_prune_key in self.module.layer2split:
+    #         passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
+    #
+    #         name_mask = self.get_mask_name(active_prune_key)
+    #         filter_mask = self.filter_names[name_mask]
+    #         active_channels = filter_mask.sum().item()
+    #
+    #         layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
+    #
+    #         # Adjust for remaining pruning budget and minimum layer size
+    #         remaining_to_prune = total_to_prune - pruned_so_far
+    #         layer_prune_amount = min(layer_prune_amount, remaining_to_prune)
+    #         min_size = self.minimum_layer.get(active_prune_key, 1)
+    #         max_prune = active_channels - min_size
+    #         layer_prune_amount = min(layer_prune_amount, max_prune)
+    #
+    #         if layer_prune_amount <= 0:
+    #             continue
+    #
+    #         # Get combined scores and monitoring metrics
+    #         combined_scores, metrics = self.combined_pruning_score(
+    #             active_prune_key, beta, layer_prune_amount)
+    #
+    #         # Get indices to prune (highest scores = most prunable)
+    #         active_indices = torch.where(filter_mask.bool())[0].to(combined_scores.device)
+    #         active_combined_scores = combined_scores[filter_mask.bool()]
+    #
+    #         _, sorted_indices = torch.sort(active_combined_scores, descending=True)
+    #         del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
+    #
+    #         # Set pruning masks
+    #         self.filter_names[self.get_mask_name(active_prune_key)][del_ind] = 0
+    #         self.passive_names[self.get_mask_name(passive_prune_key)][del_ind] = 0
+    #
+    #         pruned_so_far += len(del_ind)
+    #
+    #         # Update global metrics
+    #         global_metrics['total_pruned_count'] += layer_prune_amount
+    #         global_metrics['total_layers_pruned'] += 1
+    #
+    #         if metrics.get('changed_count', 0) > 0:
+    #             global_metrics['total_changed_count'] += metrics.get('changed_count', 0)
+    #             global_metrics['layers_with_changes'] += 1
+    #
+    #         # Log layer-specific metrics to wandb
+    #         layer_name = ".".join([str(i) for i in active_prune_key])
+    #         metrics_dict = {
+    #             f"layer/{layer_name}/prune_count": layer_prune_amount,
+    #             f"layer/{layer_name}/active_channels": active_channels,
+    #         }
+    #
+    #         # Add monitoring metrics
+    #         for metric_name, value in metrics.items():
+    #             metrics_dict[f"layer/{layer_name}/{metric_name}"] = value
+    #
+    #         wandb.log(metrics_dict)
+    #
+    #         # Print summary
+    #         change_info = ""
+    #         if 'changed_percentage' in metrics:
+    #             change_info = f" (Changed: {metrics['changed_percentage']:.1f}% of decisions)"
+    #
+    #         print(f"Layer {active_prune_key}: Pruned {len(del_ind)}/{active_channels}{change_info}")
+    #
+    #     # Apply masks
+    #     self.update_filter_mask()
+    #     self.apply_mask()
+    #
+    #     # Calculate and log global statistics
+    #     if global_metrics['total_pruned_count'] > 0:
+    #         global_change_percentage = 100.0 * global_metrics['total_changed_count'] / global_metrics[
+    #             'total_pruned_count']
+    #     else:
+    #         global_change_percentage = 0.0
+    #
+    #     wandb.log({
+    #         "global/pruned_channels": pruned_so_far,
+    #         "global/target_to_prune": total_to_prune,
+    #         "global/he_beta": beta,
+    #         "global/changed_decisions_count": global_metrics['total_changed_count'],
+    #         "global/changed_decisions_percentage": global_change_percentage,
+    #         "global/layers_with_changes": global_metrics['layers_with_changes'],
+    #         "global/total_layers_pruned": global_metrics['total_layers_pruned'],
+    #     })
+    #
+    #     print(f"Total pruned: {pruned_so_far}/{total_to_prune} channels")
+    #     print(
+    #         f"HE influenced {global_metrics['total_changed_count']} pruning decisions ({global_change_percentage:.1f}%)")
+    #     print(
+    #         f"HE made changes in {global_metrics['layers_with_changes']}/{global_metrics['total_layers_pruned']} layers")
 
 
     '''
@@ -1339,8 +1339,8 @@ class Masking(object):
                         print ("current layer rate",self.layer_rate)
                         
                         print ('===========del layer===============')
-                        # self.del_layer(selective=self.args.he_selective)
-                        self.del_layer()
+                        self.del_layer(selective=self.args.he_selective)
+                        # self.del_layer()
 
                         print ('===========done ===============')
 

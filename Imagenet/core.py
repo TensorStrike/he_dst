@@ -279,6 +279,9 @@ class Masking(object):
 
         self.temp_mask = {}
 
+        self.he_count=0
+        self.umm_count=0
+
     '''    
 
 
