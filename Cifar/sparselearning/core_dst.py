@@ -768,7 +768,7 @@ class Masking(object):
                 # cv = norm_he.std() / (norm_he.mean() + 1e-8)
 
                 cv = active_he_scores.std() / (active_he_scores.mean() + 1e-8)
-                if cv >= 0.01:
+                if cv >= 0.05:
                     print(f"layer {active_prune_key}: HE std = {active_he_scores.std():.4f}, cv = {cv}, using HE")
                     _, sorted_indices = torch.sort(active_he_scores, descending=True)  # higher HE = more prunable
                 else:
