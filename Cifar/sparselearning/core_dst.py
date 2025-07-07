@@ -715,18 +715,16 @@ class Masking(object):
 
         wandb.log(metrics)
 
-
-
     def del_layer(self, selective=False):
         print("===========del layer with layer-wise HE===============")
         self.track_hyperspherical_energy()
 
         print(f"Total filter_names items: {sum(mask.sum().item() for mask in self.filter_names.values())}")
         print(f"Total filter_masks items: {sum(mask.sum().item() for mask in self.filter_masks.values())}")
-        filter_number = self.filter_num()   # current num of filters in the network
+        filter_number = self.filter_num()  # current num of filters in the network
         print(filter_number, '/', self.baseline_filter_num, 'channels')
 
-        rate = 1 - self.layer_rate      # target density
+        rate = 1 - self.layer_rate  # target density
         total_to_prune = filter_number - self.baseline_filter_num * rate
         print(f"Total channels to prune: {total_to_prune}")
         if total_to_prune <= 0:
@@ -741,7 +739,7 @@ class Masking(object):
             passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
 
             name_mask = self.get_mask_name(active_prune_key)
-            filter_mask = self.filter_names[name_mask]               # active filter mask
+            filter_mask = self.filter_names[name_mask]  # active filter mask
             active_channels = filter_mask.sum().item()
 
             layer_prune_amount = int(total_to_prune * (active_channels / filter_number))
@@ -757,23 +755,38 @@ class Masking(object):
             if layer_prune_amount <= 0:
                 continue
 
-            he_scores = self.hyperspherical_channel_energy(active_prune_key, model=self.args.he_model, power=self.args.he_power)
+            he_scores = self.hyperspherical_channel_energy(active_prune_key, model=self.args.he_model,
+                                                           power=self.args.he_power)
 
             # Get indices to prune (highest HE = most redundant)
             active_indices = torch.where(filter_mask.bool())[0].to(he_scores.device)
             active_he_scores = he_scores[filter_mask.bool()]
 
             if selective:
-                he_std = active_he_scores.std()
-                print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
 
-                if he_std < threshold:  # fall back to UMM
+                # norm_he = active_he_scores / (active_channels * (active_channels - 1))
+                # cv = norm_he.std() / (norm_he.mean() + 1e-8)
+
+                cv = active_he_scores.std() / (active_he_scores.mean() + 1e-8)
+                if cv >= 0.01:
+                    print(f"layer {active_prune_key}: HE std = {active_he_scores.std():.4f}, cv = {cv}, using HE")
+                    _, sorted_indices = torch.sort(active_he_scores, descending=True)  # higher HE = more prunable
+                else:
+                    print(f"layer {active_prune_key}: HE std = {active_he_scores.std():.4f}, cv = {cv}, using UMM")
                     weight = self.get_module(active_prune_key).weight.data
                     umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+                    _, sorted_indices = torch.sort(umm, descending=False)  # lower UMM = more prunable
 
-                    _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
-                else:  # use HE
-                    _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
+                # he_std = active_he_scores.std()
+                # print(f"Layer {active_prune_key}: HE std = {he_std:.4f}, using {'UMM' if he_std < self.args.he_threshold else 'HE'}")
+                #
+                # if he_std < threshold:  # fall back to UMM
+                #     weight = self.get_module(active_prune_key).weight.data
+                #     umm = weight.abs().mean(dim=(1, 2, 3))[filter_mask.bool()].cpu()
+                #
+                #     _, sorted_indices = torch.sort(umm, descending=False)    # lower UMM = more prunable
+                # else:  # use HE
+                #     _, sorted_indices = torch.sort(active_he_scores, descending=True)   # higher HE = more prunable
 
                 del_ind = active_indices[sorted_indices[:layer_prune_amount]].tolist()
             else:
