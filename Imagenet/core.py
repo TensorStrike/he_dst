@@ -388,7 +388,7 @@ class Masking(object):
             bias_name.append(str(i))
 
         weight_name.append("weight")
-        # weight_name.insert(0, "module")
+        weight_name.insert(0, "module")
 
         weight_name = ".".join(weight_name)
 
