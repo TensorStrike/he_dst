@@ -1268,12 +1268,16 @@ class Masking(object):
         for name, param in self.module.named_parameters():
             mask = self.masks.get(name, None)
             if mask is not None:
-                param_nz = (param != 0).sum().item()
-                mask_nz = (mask != 0).sum().item()
-                print(f"{name}: param nonzero = {param_nz}/{param.numel()}, mask nonzero = {mask_nz}/{mask.numel()}")
-                if param.dim() == 4:  # Conv
-                    ch_nz = (param.view(param.size(0), -1) != 0).sum(dim=1)
-                    print(f"    Per-channel nonzero: {ch_nz.tolist()}")
+                nonzero = (param != 0).sum().item()
+                total = param.numel()
+                density = 100.0 * nonzero / total
+                msg = f"{name}: shape={tuple(param.shape)}, nonzero={nonzero}/{total} ({density:.2f}%)"
+                # For conv layers, print number of fully pruned channels
+                if param.dim() == 4:
+                    ch_nonzero = (param.view(param.size(0), -1) != 0).sum(dim=1)
+                    zero_channels = (ch_nonzero == 0).sum().item()
+                    msg += f", fully pruned channels={zero_channels}/{param.size(0)}"
+                print(msg)
         print("==== END DEBUG ====")
 
     def adjust_prune_rate(self):
