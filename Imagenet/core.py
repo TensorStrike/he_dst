@@ -309,6 +309,8 @@ class Masking(object):
     def get_module(self, key):
         m = self.module
         for k in key:
+            if k == "module":
+                continue  # skip "module" keys
             if isinstance(k, int):
                 m = m[k]
             else:
@@ -360,6 +362,8 @@ class Masking(object):
         passive_names = {}
 
         for ind in self.module.layer2split:
+            print("DEBUG layer2split index:", ind)
+
             dim = self.get_module(ind).weight.shape[0]
 
             mask = torch.ones(dim)
