@@ -305,17 +305,10 @@ class Masking(object):
                         print("check in", name, "density is", channel_zero / channel_all, "weight magnitue",
                               torch.abs(channel_vector).mean().item())
 
-    # def get_module(self, key):
-    #     return getattr(getattr(getattr(self.module, key[0]), key[1])[key[2]], key[3])
-
-
 
     def get_module(self, key):
-        m = self.base_module
+        m = self.module
         for k in key:
-            # DDP/DataParallel inserted a leading "module" – skip it
-            if k == "module":
-                continue
             if isinstance(k, int):
                 m = m[k]
             else:
@@ -366,33 +359,26 @@ class Masking(object):
         filter_names = {}
         passive_names = {}
 
-        for ind in self.base_module.layer2split:
+        for ind in self.module.layer2split:
             dim = self.get_module(ind).weight.shape[0]
 
             mask = torch.ones(dim)
             # mask[int(dim/2):]=0
             filter_names[self.get_mask_name(ind)] = mask
 
-            passive_ind = self.base_module.next_layers[ind][0]
+            passive_ind = self.module.next_layers[ind][0]
             passive_names[self.get_mask_name(passive_ind)] = mask
 
         self.filter_names = filter_names
         self.passive_names = passive_names
 
+
     def get_mask_name(self, key):
-
-        weight_name = []
-        bias_name = []
-        for i in key:
-            weight_name.append(str(i))
-            bias_name.append(str(i))
-
+        weight_name = [str(i) for i in key]
         weight_name.append("weight")
-        weight_name.insert(0, "module")
-
         weight_name = ".".join(weight_name)
-
         return weight_name
+
 
     def filter_num(self):
 
@@ -820,17 +806,17 @@ class Masking(object):
         #         self.baseline_nonzero += weight.numel()*density
 
         ## init for layer
-        for index in self.base_module.layer2split:
+        for index in self.module.layer2split:
             self.baseline_filter_num += self.get_module(index).weight.shape[0]
 
         print("baseline fitler num", self.baseline_filter_num)
 
         self.bound_layer = {}
-        for index in self.base_module.layer2split:
+        for index in self.module.layer2split:
             self.bound_layer[index] = int(self.get_module(index).out_channels)
 
         self.minimum_layer = {}
-        for index in self.base_module.layer2split:
+        for index in self.module.layer2split:
             self.minimum_layer[index] = int(
                 self.get_module(index).out_channels * (1 - self.args.start_layer_rate) * self.args.minumum_ratio)
 
@@ -1156,7 +1142,6 @@ class Masking(object):
     def add_module(self, module):
 
         self.module = module
-        self.base_module = module.module if hasattr(module, 'module') else module   # compatibility for 1gpu and multigpu
 
         self.modules.append(self.module)
         for name, tensor in self.module.named_parameters():
@@ -1200,7 +1185,7 @@ class Masking(object):
 
         if self.args.rm_first:
             for name, tensor in module.named_parameters():
-                if name == 'module.conv1.weight':
+                if name == 'conv1.weight':
                     self.masks.pop(name)
                     print(f"pop out {name}")
         self.init(mode=self.args.sparse_init, density=self.args.init_density)
@@ -1253,13 +1238,9 @@ class Masking(object):
 
     def apply_mask(self):
         for module in self.modules:
-
-            # print ("fusing masks")
             for name, mask in self.masks.items():
-
                 if name in self.filter_masks.keys():
                     self.masks[name] = torch.logical_and(self.filter_masks[name], self.masks[name]).float()
-
             for name, tensor in module.named_parameters():
                 if name in self.masks:
                     if not self.half:
@@ -1272,13 +1253,24 @@ class Masking(object):
                         if name in self.name_to_32bit:
                             tensor2 = self.name_to_32bit[name]
                             tensor2.data = tensor2.data * self.masks[name]
-
-            for module in self.modules:
-                for name, tensor in module.named_parameters():
-                    if "bias" in name:
-                        weight_name = name[:-4] + "weight"
-                        if weight_name in self.filter_names:
-                            tensor.data = tensor.data * self.filter_names[weight_name].float().cuda()
+        for module in self.modules:
+            for name, tensor in module.named_parameters():
+                if "bias" in name:
+                    weight_name = name[:-4] + "weight"
+                    if weight_name in self.filter_names:
+                        tensor.data = tensor.data * self.filter_names[weight_name].float().cuda()
+        # === DEBUG PRINTS ===
+        print("==== DEBUG: Mask/weight densities after mask applied ====")
+        for name, param in self.module.named_parameters():
+            mask = self.masks.get(name, None)
+            if mask is not None:
+                param_nz = (param != 0).sum().item()
+                mask_nz = (mask != 0).sum().item()
+                print(f"{name}: param nonzero = {param_nz}/{param.numel()}, mask nonzero = {mask_nz}/{mask.numel()}")
+                if param.dim() == 4:  # Conv
+                    ch_nz = (param.view(param.size(0), -1) != 0).sum(dim=1)
+                    print(f"    Per-channel nonzero: {ch_nz.tolist()}")
+        print("==== END DEBUG ====")
 
     def adjust_prune_rate(self):
         for module in self.modules:
@@ -1830,48 +1822,6 @@ class Masking(object):
 
         self.apply_mask()
 
-    # def truncate_weights_prune(self, pruning_rate):
-    #     print ("\n")
-    #     print('dynamic sparse change prune')
-
-    #     self.gather_statistics()
-
-    #     #################################prune weights#############################
-
-    #     tokill=self.total_nonzero-self.baseline_nonzero
-    #     print ("to kill", tokill,"expect", self.baseline_nonzero)
-    #     if tokill>0:
-    #         self.total_removed=self.global_magnitude_death(tokill)
-
-    #     self.apply_mask()
-
-    # def truncate_weights_grow(self, pruning_rate):
-    #        #################################grow weights#############################
-
-    #     # get gradients
-    #     # inputs, targets = next(iter(self.train_loader))
-    #     # inputs = inputs.to(self.device)
-    #     # targets = targets.to(self.device)
-    #     # inputs.requires_grad = True
-    #     # # Let's create a fresh copy of the network so that we're not worried about
-    #     # self.module.zero_grad()
-    #     # outputs = self.module.forward(inputs)
-    #     # loss = F.nll_loss(outputs, targets)
-    #     # loss.backward()
-
-    #     print('dynamic sparse change grow')
-
-    #     self.gather_statistics()
-
-    #     togrow=self.total_params*pruning_rate-self.total_nonzero
-    #     print ("self.total_params*pruning_rate",self.total_params*pruning_rate)
-    #     print ("self.total_nonzero",self.total_nonzero)
-    #     print ("to grow",togrow)
-    #     if togrow>0:
-    #         total_nonzero_new=self.global_gradient_growth(togrow)
-    #         # print ("total_nonzero_new",total_nonzero_new)
-
-    #     self.apply_mask()
 
     def truncate_weights(self, pruning_rate):
         print("\n")
@@ -1976,44 +1926,7 @@ class Masking(object):
 
         self.print_nonzero_counts()
 
-    # def truncate_weights(self):
 
-    #     for module in self.modules:
-    #         for name, weight in module.named_parameters():
-    #             if name not in self.masks: continue
-    #             mask = self.masks[name]
-    #             self.name2nonzeros[name] = mask.sum().item()
-    #             self.name2zeros[name] = mask.numel() - self.name2nonzeros[name]
-    #             # prune
-    #             new_mask = self.prune_func(self, mask, weight, name)
-    #             removed = self.name2nonzeros[name] - new_mask.sum().item()
-    #             self.total_removed += removed
-    #             self.name2removed[name] = removed
-    #             self.masks[name][:] = new_mask
-
-    #     for module in self.modules:
-    #         for name, weight in module.named_parameters():
-    #             if name not in self.masks: continue
-    #             new_mask = self.masks[name].data.byte()
-    #             # growth
-    #             new_mask = self.growth_func(self, name, new_mask, math.floor(self.name2removed[name]), weight)
-    #             # exchanging masks
-    #             # self.masks.pop(name)
-    #             self.masks[name][:] = new_mask.float()
-
-    #     self.apply_mask()
-
-    #     # calculity the spasity
-    #     total_size = 0
-    #     for name, weight in self.masks.items():
-    #         total_size += weight.numel()
-    #     print('Total Model parameters after dst:', total_size)
-
-    #     sparse_size = 0
-    #     for name, weight in self.masks.items():
-    #         sparse_size += (weight != 0).sum().int().item()
-
-    #     print('Total parameters under sparsity level of {0}: {1} after dst'.format(self.args.density, sparse_size / total_size))
 
     '''
                 UTILITY
