@@ -1264,21 +1264,21 @@ class Masking(object):
                     if weight_name in self.filter_names:
                         tensor.data = tensor.data * self.filter_names[weight_name].float().cuda()
         # === DEBUG PRINTS ===
-        print("==== DEBUG: Mask/weight densities after mask applied ====")
-        for name, param in self.module.named_parameters():
-            mask = self.masks.get(name, None)
-            if mask is not None:
-                nonzero = (param != 0).sum().item()
-                total = param.numel()
-                density = 100.0 * nonzero / total
-                msg = f"{name}: shape={tuple(param.shape)}, nonzero={nonzero}/{total} ({density:.2f}%)"
-                # For conv layers, print number of fully pruned channels
-                if param.dim() == 4:
-                    ch_nonzero = (param.view(param.size(0), -1) != 0).sum(dim=1)
-                    zero_channels = (ch_nonzero == 0).sum().item()
-                    msg += f", fully pruned channels={zero_channels}/{param.size(0)}"
-                print(msg)
-        print("==== END DEBUG ====")
+        # print("==== DEBUG: Mask/weight densities after mask applied ====")
+        # for name, param in self.module.named_parameters():
+        #     mask = self.masks.get(name, None)
+        #     if mask is not None:
+        #         nonzero = (param != 0).sum().item()
+        #         total = param.numel()
+        #         density = 100.0 * nonzero / total
+        #         msg = f"{name}: shape={tuple(param.shape)}, nonzero={nonzero}/{total} ({density:.2f}%)"
+        #         # For conv layers, print number of fully pruned channels
+        #         if param.dim() == 4:
+        #             ch_nonzero = (param.view(param.size(0), -1) != 0).sum(dim=1)
+        #             zero_channels = (ch_nonzero == 0).sum().item()
+        #             msg += f", fully pruned channels={zero_channels}/{param.size(0)}"
+        #         print(msg)
+        # print("==== END DEBUG ====")
 
     def adjust_prune_rate(self):
         for module in self.modules:
