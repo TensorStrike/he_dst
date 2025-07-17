@@ -706,7 +706,7 @@ class Masking(object):
         if not hasattr(self, 'prev_std_dict'):
             self.prev_std_dict = {}
 
-        threshold = 0.1  # Relative HE std change threshold (you may tune this)
+        threshold = 0.05  # Relative HE std change threshold (you may tune this)
 
         for active_prune_key in self.module.layer2split:
             passive_prune_key, norm_key = self.module.next_layers[active_prune_key]
